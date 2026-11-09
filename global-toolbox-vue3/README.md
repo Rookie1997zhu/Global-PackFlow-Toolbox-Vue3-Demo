@@ -1,50 +1,84 @@
-# PackFlow Tools — Vue 3 多语言包装与物流工具平台 Demo
+# PackFlow Tools — Vue 3 packaging & logistics toolbox (Korea-first Demo)
 
-## 项目定位
-公开、通用、独立工具型 SaaS 前端 Demo；中 / 英 / 韩语言切换；后期可接入登录、计费、计算服务。**不包含已有的刀版 CAD 和卡板装载代码**，仅保留集成入口。
+Browser-only demo for CBM, container/pallet loading, packing documents, and shipment checks. Languages: **한국어 / 中文 / English**. No backend login or payments.
 
-## 运行
+## Run
+
 ```bash
 npm install
 npm run dev
+npm test
+npm run build
+npm run preview
+```
+
+Build runs TypeScript check, Vite, then `scripts/prerender-seo.mjs` to emit crawlable `dist/{locale}/tools/{slug}/index.html`, `sitemap.xml`, and `404.html`.
+
+### Deploy env
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `VITE_BASE` | `/` | Vite public base (use `/repo/` on GitHub Pages subpath) |
+| `SITE_ORIGIN` | `https://example.com` | Absolute origin written into sitemap / prerender canonicals |
+
+```bash
+# PowerShell example
+$env:VITE_BASE="/"
+$env:SITE_ORIGIN="https://your-domain.example"
 npm run build
 ```
 
-## 本次可交互模块（11 个）
-1. CBM / 体积重：体积、毛重、体积重、计费重。
-2. 集装箱装柜估算：20GP / 40GP / 40HQ 名义容积、重量利用率及二维填充示意（不是实际 3D 装载算法）。
-3. 物流运费比较：自定义示例单价；不含最低收费、税费、附加费和时效。
-4. 包装与物流成本：包装、人工、卡板、运输与加价率。
-5. 箱唛：可打印样式、CSV 导出；打印可通过浏览器另存 PDF。
-6. Packing List：自动汇总、打印、CSV 导出。
-7. 出货资料核对：手动声明值与共享货物数据对比。
-8. 纸板矩形排版：按矩形网格估算每张数量、张数、利用率；非异形 Nesting。
-9. 仓库容量：面积与货位估算；不代表实际安全布局。
-10. Commercial Invoice：基础发票样式、打印、CSV。
-11. 单位换算：长度、重量、体积。
+Update `public/robots.txt` Sitemap line to match production before deploy.
 
-## 已有 Demo 的集成入口（2 个）
-- `dieline`：参数化刀版 CAD
-- `pallet`：卡板装载优化
+## Routed URLs (refreshable)
 
-建议把既有项目逐步拆成独立 Vue 组件或微前端，通过工具注册表、路由和共享 UI 接入。**本 Demo 未引入已有项目源码**。
+Korea-first root `/` redirects to `/ko/` (or last `packflow.locale`).
 
-## 文件结构
-- `src/App.vue`：平台页面、工具模块、样例数据与计算逻辑。
-- `src/style.css`：响应式设计系统。
-- `src/main.ts`：Vue 入口。
-- `vite.config.ts`：Vite 配置。
+Examples:
 
-## 数据与商业化边界
-- 示例货物数据只保存在浏览器运行时，刷新会恢复默认值。
-- 无后端、无登录、无支付、无数据库、无真实云端保存。
-- 所有运费、货柜尺寸、仓库货位和排版结果仅供交互演示。
-- 真实生产前应接入承运商费率、货柜设备规格、工艺限制、重量分布、完整单证字段和专业优化算法。
-- 此 Demo 的语言切换主要覆盖平台导航和工具名称；部分专业字段保留英语，正式上线需要翻译字典补齐，并采用 `/en/`、`/zh/`、`/ko/` 独立 URL 做 SEO。
-- `Print / Save as PDF` 使用浏览器打印功能，不是独立的 PDF 生成服务。
+- `/ko/` — home
+- `/ko/tools/cbm-calculator/`
+- `/ko/tools/container-loading/`
+- `/ko/tools/pallet-loading/`
+- `/ko/tools/packing-list/`
+- `/ko/tools/packing-list-checker/`
+- `/ko/tools/commercial-invoice/`
+- `/ko/guides/container-from-excel/`
+- `/ko/shared/` — cargo + IndexedDB scheme backup
+- `/en/...`, `/zh/...` — same tools in other locales
 
-## 建议下一步
-1. 将每个工具从 `App.vue` 拆到 `src/tools/<slug>/`，以注册表驱动菜单与路由。
-2. 增加 `vue-router` / Nuxt 以及独立语言路径，SSR/SEO。
-3. 添加自动化单元测试与真实计费、装载算法验证。
-4. 接入身份、计费、权限、项目保存服务。
+## Tools (13)
+
+| Tool | Notes |
+|------|--------|
+| CBM / volumetric weight | Charge modes: shipment / per SKU / per piece |
+| Container loading | 20GP/40GP/40HQ, 3D heuristic, unload reasons, load-guide PDF |
+| Pallet loading | **T11/T12** presets, layered PDF/CSV, geometry disclaimer |
+| Freight comparison | Simulated quotes; FX required before cheapest ranking |
+| Packaging cost | A/B with waste / storage / tax |
+| Shipping labels | Code128 / QR |
+| Packing list | KO/EN Excel import, CSV/XLSX/PDF |
+| Shipment audit | Dual-table diff with fix hints |
+| Commercial invoice | Incoterms + Korean PDF |
+| Sheet nesting | MaxRects / Guillotine (demo limits apply) |
+| Warehouse capacity | Rough rack/floor model |
+| Unit converter | Length / mass / volume |
+| Dieline CAD | Integrated parametric dieline + 3D preview |
+
+## Limits (honest)
+
+- Geometry packing ≠ compression / CG / lashing certification
+- Freight numbers are user-entered samples, not live carrier APIs
+- Demo unit caps (e.g. container 400, pallet 150)
+- IndexedDB schemes are local to the browser
+- SEO pages improve crawlability; **Naver/Google ranking is not guaranteed**
+
+## Docs
+
+- [Naver Search Advisor checklist](docs/seo/naver-search-advisor.md)
+- [Korea user-test protocol](docs/user-tests/korea-v12-protocol.md)
+- [Cloud schemes API draft](docs/api/schemes.md)
+
+## Stack
+
+Vue 3 + TypeScript + Vite, `vue-router`, Vitest, ExcelJS, pdf-lib (+ Korean font), Three.js (3D views).

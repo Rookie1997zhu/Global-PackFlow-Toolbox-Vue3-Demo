@@ -482,6 +482,11 @@ const en: Record<string, string> = {
   errSchemeInvalid: 'Invalid scheme file',
   errSchemeDb: 'Browser storage unavailable',
   strategy: 'Strategy',
+  guides: 'Guides',
+  guidesEyebrow: 'Korea task playbooks',
+  guidesSub: 'Short walkthroughs aligned to export / warehouse jobs.',
+  guideSample: 'Sample file',
+  guideOpenTool: 'Open related tool',
 }
 
 const zh: Record<string, string> = {
@@ -966,6 +971,11 @@ const zh: Record<string, string> = {
   errSchemeInvalid: '方案文件无效',
   errSchemeDb: '浏览器存储不可用',
   strategy: '策略',
+  guides: '指南',
+  guidesEyebrow: '韩国任务手册',
+  guidesSub: '对齐出口/仓库岗位的短流程说明。',
+  guideSample: '样例文件',
+  guideOpenTool: '打开相关工具',
 }
 
 const ko: Record<string, string> = {
@@ -1450,6 +1460,11 @@ const ko: Record<string, string> = {
   errSchemeInvalid: '방안 파일이 유효하지 않음',
   errSchemeDb: '브라우저 저장소를 사용할 수 없음',
   strategy: '전략',
+  guides: '가이드',
+  guidesEyebrow: '한국 업무 플레이북',
+  guidesSub: '수출·창고 업무에 맞춘 짧은 절차 안내.',
+  guideSample: '샘플 파일',
+  guideOpenTool: '관련 도구 열기',
 }
 
 export const messages: Record<Locale, Record<string, string>> = { en, zh, ko }
