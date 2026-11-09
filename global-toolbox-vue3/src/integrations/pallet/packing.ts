@@ -3,7 +3,14 @@
 export type Carton={id:number,name:string,l:number,w:number,h:number,qty:number,kg:number,color:string,stackable:boolean}
 export type Placed={id:number,name:string,x:number,y:number,z:number,l:number,w:number,h:number,kg:number,color:string,unitId:string}
 export type Pallet={boxes:Placed[],weight:number,usedHeight:number}
-export type Result={pallets:Pallet[],unplaced:{name:string,qty:number}[],warnings:string[],totalBoxes:number,packedBoxes:number,volume:number,strategy?:string,attempts?:number}
+export type UnplacedReasonCode =
+  | 'errPalletInvalidSku'
+  | 'errPalletTooLarge'
+  | 'errPalletOverweight'
+  | 'errPalletTooMany'
+  | 'errPalletUnplaced'
+export type UnplacedItem={name:string,qty:number,reasonCode:UnplacedReasonCode}
+export type Result={pallets:Pallet[],unplaced:UnplacedItem[],warnings:string[],totalBoxes:number,packedBoxes:number,volume:number,strategy?:string,attempts?:number}
 export type Config={l:number,w:number,h:number,maxHeight:number,maxWeight:number,palletKg:number}
 type Unit=Carton&{unitId:string}
 type Point={x:number,y:number,z:number}
@@ -98,22 +105,34 @@ export function validate(pallets:Pallet[],c:Config):string[]{
  })
  return errors
 }
+function fitsEmptyPallet(u:Carton,c:Config):boolean{
+ const orients=u.l===u.w?[[u.l,u.w]]:[[u.l,u.w],[u.w,u.l]]
+ return orients.some(([l,w])=>l<=c.l+EPS&&w<=c.w+EPS&&c.h+u.h<=c.maxHeight+EPS)
+}
+
 export function pack(config:Config,cartons:Carton[]):Result{
  const totalBoxes=cartons.reduce((s,u)=>s+(Number.isFinite(u.qty)?Math.max(0,Math.floor(u.qty)):0),0)
  const volume=cartons.reduce((s,u)=>s+(Number.isFinite(u.qty)?Math.max(0,Math.floor(u.qty))*u.l*u.w*u.h/1e9:0),0)
  const invalid=Object.values(config).some(v=>!Number.isFinite(v)||v<0)||config.l<=0||config.w<=0||config.maxHeight<=config.h||config.maxWeight<=config.palletKg
  const base={totalBoxes,volume}
- if(invalid)return {...base,pallets:[],packedBoxes:0,unplaced:cartons.map(c=>({name:c.name,qty:c.qty})),warnings:['卡板参数无效，请检查尺寸、最大高度及重量']}
- const warnings:string[]=[];const units:Unit[]=[];const unplaced=new Map<string,number>()
- const miss=(name:string,n=1)=>unplaced.set(name,(unplaced.get(name)||0)+n)
+ if(invalid)return {...base,pallets:[],packedBoxes:0,unplaced:cartons.map(c=>({name:c.name,qty:c.qty,reasonCode:'errPalletInvalidSku' as const})),warnings:['errPalletConfigInvalid']}
+ const warnings:string[]=[];const units:Unit[]=[]
+ const unplaced=new Map<string,UnplacedItem>()
+ const miss=(name:string,n=1,reasonCode:UnplacedReasonCode='errPalletUnplaced')=>{
+  const prev=unplaced.get(name)
+  if(prev){prev.qty+=n;return}
+  unplaced.set(name,{name,qty:n,reasonCode})
+ }
  for(const u of cartons){
   const n=Number.isFinite(u.qty)?Math.max(0,Math.floor(u.qty)):0
-  if(![u.l,u.w,u.h,u.kg].every(v=>Number.isFinite(v)&&v>0)){miss(u.name,n);continue}
+  if(![u.l,u.w,u.h,u.kg].every(v=>Number.isFinite(v)&&v>0)){miss(u.name,n,'errPalletInvalidSku');continue}
+  if(u.kg>config.maxWeight-config.palletKg+EPS){miss(u.name,n,'errPalletOverweight');continue}
+  if(!fitsEmptyPallet(u,config)){miss(u.name,n,'errPalletTooLarge');continue}
   const allowed=Math.max(0,Math.min(n,MAX_UNITS-units.length))
   for(let i=0;i<allowed;i++)units.push({...u,unitId:`${u.id}-${i}`})
-  if(n>allowed)miss(u.name,n-allowed)
+  if(n>allowed)miss(u.name,n-allowed,'errPalletTooMany')
  }
- if(totalBoxes>MAX_UNITS)warnings.push(`浏览器演示版最多优化 ${MAX_UNITS} 箱，超出数量已计入未装载`)
+ if(totalBoxes>MAX_UNITS)warnings.push('errPalletTooMany')
  let best:{pallets:Pallet[],missing:Unit[]}|null=null;let bestVariant=0
  const attempts=units.length>100?4:MAX_ATTEMPTS
  for(let variant=0;variant<attempts;variant++){
@@ -121,10 +140,10 @@ export function pack(config:Config,cartons:Carton[]):Result{
   const better=!best||trial.missing.length<best.missing.length||(trial.missing.length===best.missing.length&&(trial.pallets.length<best.pallets.length||(trial.pallets.length===best.pallets.length&&trial.pallets.reduce((s,p)=>s+p.usedHeight,0)<best.pallets.reduce((s,p)=>s+p.usedHeight,0))))
   if(better){best=trial;bestVariant=variant}
  }
- for(const u of best?.missing||[])miss(u.name)
+ for(const u of best?.missing||[])miss(u.name,1,'errPalletUnplaced')
  const pallets=best?.pallets||[]
  const errors=validate(pallets,config);if(errors.length)warnings.push(`几何校验失败：${errors.slice(0,3).join('；')}`)
- if(unplaced.size)warnings.push('部分纸箱未能安排，可能因尺寸、承重或完整支撑要求受限')
- warnings.push('安全提示：仅检查几何、完整底面支撑、禁止叠放和总重量；未验证纸箱抗压、重心及运输稳定性，请人工复核')
- return {...base,pallets,unplaced:[...unplaced].map(([name,qty])=>({name,qty})),warnings,packedBoxes:pallets.reduce((s,p)=>s+p.boxes.length,0),strategy:['体积优先','底面积优先','重量优先','高度优先','不可堆叠优先+体积','不可堆叠优先+底面积','扰动搜索 A','扰动搜索 B'][bestVariant],attempts}
+ if(unplaced.size)warnings.push('errPalletPartialUnplaced')
+ warnings.push('palletSafetyHint')
+ return {...base,pallets,unplaced:[...unplaced.values()],warnings,packedBoxes:pallets.reduce((s,p)=>s+p.boxes.length,0),strategy:['体积优先','底面积优先','重量优先','高度优先','不可堆叠优先+体积','不可堆叠优先+底面积','扰动搜索 A','扰动搜索 B'][bestVariant],attempts}
 }

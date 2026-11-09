@@ -2,7 +2,12 @@
 import { computed, inject, onBeforeUnmount, ref, watch, type Ref } from 'vue'
 import type { Locale } from '../../i18n'
 import { useCargo } from '../../shared/cargo/useCargo'
+import { parseCsv } from '../../shared/export/csv'
+import { bucketLayersByZ, exportLoadGuidePdf } from '../../shared/export/loadGuide'
 import { formatNumber } from '../../shared/format/number'
+import SheetImportPanel from '../../shared/import/SheetImportPanel.vue'
+import { mappedToCargo } from '../../shared/import/mappedToCargo'
+import { applyMapping, detectColumnMapping, type MappedRow } from '../../shared/import/sheetMapping'
 import { CONTAINER_PRESETS } from './containers'
 import Container2D from './Container2D.vue'
 import Container3D from './Container3D.vue'
@@ -13,6 +18,7 @@ import {
   exportPackCsv,
   exportPackJson,
   exportSvgPng,
+  groupUnplacedReasons,
   resolveContainer,
   type LocalSku,
 } from './useContainer'
@@ -25,7 +31,7 @@ const emit = defineEmits<{ editCargo: [] }>()
 
 const hostLocale = inject<Ref<Locale>>('hostLocale', ref('en'))
 const format = (v: number, d = 2) => formatNumber(v, hostLocale.value, d)
-const { cargo, qty, cbm } = useCargo()
+const { cargo, qty, cbm, setCargo } = useCargo()
 
 const presetId = ref('40HQ')
 const customL = ref(12000)
@@ -36,6 +42,8 @@ const skus = ref<LocalSku[]>(cargoToSkus(cargo.value))
 const result = ref<PackResult | null>(null)
 const errorKey = ref('')
 const busy = ref(false)
+const pdfBusy = ref(false)
+const sampleError = ref('')
 const viewMode = ref<'2d' | '3d'>('2d')
 const view2d = ref<InstanceType<typeof Container2D> | null>(null)
 
@@ -137,6 +145,63 @@ const warnText = (key: string) => {
   const translated = props.t(key)
   return translated === key ? key : translated
 }
+
+const unplacedGroups = computed(() =>
+  result.value ? groupUnplacedReasons(result.value.unplaced, props.t) : [],
+)
+
+const onImportApplied = (rows: MappedRow[]) => {
+  setCargo(mappedToCargo(rows))
+  syncFromCargo()
+}
+
+const loadKrSample = async () => {
+  sampleError.value = ''
+  try {
+    const res = await fetch('/samples/kr-container-cargo.csv')
+    const table = parseCsv(await res.text())
+    onImportApplied(applyMapping(table, detectColumnMapping(table[0] || [])))
+  } catch (err) {
+    sampleError.value = err instanceof Error ? err.message : String(err)
+  }
+}
+
+const exportLoadPdf = async () => {
+  if (!result.value) return
+  pdfBusy.value = true
+  try {
+    const items = result.value.placements.map((p) => ({
+      sku: p.name,
+      l: p.l,
+      w: p.w,
+      h: p.h,
+      x: p.x,
+      y: p.y,
+      z: p.z,
+    }))
+    await exportLoadGuidePdf(
+      {
+        title: props.t('loadGuideTitleContainer'),
+        specLabel: `${props.t('containerType')}: ${props.t(resolved.value.preset.labelKey)} · ${containerConfig.value.length}×${containerConfig.value.width}×${containerConfig.value.height} mm`,
+        utilizationLabel: `${props.t('volumeUtil')}: ${result.value.volumeUtilPct.toFixed(1)}% · ${props.t('payloadUtil')}: ${result.value.weightUtilPct.toFixed(1)}%`,
+        packedLabel: `${props.t('containerPacked')}: ${result.value.packedCount} / ${result.value.totalCount}`,
+        unplacedLabel: props.t('containerUnplaced'),
+        layerLabel: props.t('loadGuideLayer'),
+        disclaimer: props.t('containerSafetyHint'),
+        layers: bucketLayersByZ(items),
+        unplaced: result.value.unplaced.map((u) => ({
+          name: u.name,
+          qty: u.qty,
+          reason: props.t(u.reason),
+        })),
+        metaLines: [`${props.t('strategy')}: ${result.value.strategy}`],
+      },
+      'container-load-guide.pdf',
+    )
+  } finally {
+    pdfBusy.value = false
+  }
+}
 </script>
 
 <template>
@@ -168,9 +233,15 @@ const warnText = (key: string) => {
           <h3>{{ t('containerSkus') }}</h3>
           <div class="btn-row">
             <button class="btn-secondary" type="button" @click="syncFromCargo">{{ t('containerSyncCargo') }}</button>
+            <button class="btn-secondary" type="button" @click="loadKrSample">{{ t('loadKrSample') }}</button>
             <button class="btn-secondary" type="button" @click="emit('editCargo')">{{ t('edit') }} ↗</button>
           </div>
         </div>
+        <p v-if="sampleError" class="field-hint" style="color:#b42318">{{ sampleError }}</p>
+        <div style="margin: 10px 0; padding-top: 8px; border-top: 1px solid #e5ebf1">
+          <SheetImportPanel :t="t" :title="t('importContainerSheet')" @applied="onImportApplied" />
+        </div>
+        <p class="field-hint">{{ t('containerMaxUnitsHint') }}</p>
         <div class="table-scroll">
           <table>
             <thead>
@@ -260,13 +331,20 @@ const warnText = (key: string) => {
             ⚠ {{ t('containerUnplaced') }}:
             <span v-for="u in result.unplaced" :key="u.skuId"> {{ u.name }}×{{ u.qty }} ({{ warnText(u.reason) }}) </span>
           </div>
+          <div v-if="unplacedGroups.length" class="field-hint" style="margin-top: 8px">
+            <strong>{{ t('unplacedByReason') }}:</strong>
+            <div v-for="g in unplacedGroups" :key="g.reason">{{ g.reason }} ×{{ g.qty }} — {{ g.names.join(', ') }}</div>
+          </div>
 
           <div class="btn-row" style="margin-top: 12px; flex-wrap: wrap; gap: 8px">
             <button class="btn-secondary" type="button" @click="exportCsv">{{ t('export') }}</button>
             <button class="btn-secondary" type="button" @click="exportJson">{{ t('exportJson') }}</button>
             <button class="btn-secondary" type="button" :disabled="viewMode !== '2d'" @click="exportPng">{{ t('exportPng') }}</button>
+            <button class="btn-primary" type="button" :disabled="pdfBusy" @click="exportLoadPdf">
+              {{ pdfBusy ? t('exporting') : t('exportLoadGuidePdf') }}
+            </button>
           </div>
-          <p class="field-hint">{{ t('containerResultHint') }}</p>
+          <p class="field-hint">{{ t('containerResultHint') }} · {{ t('containerSafetyHint') }}</p>
         </template>
         <p v-else class="field-hint">{{ t('containerWaiting') }}</p>
       </div>

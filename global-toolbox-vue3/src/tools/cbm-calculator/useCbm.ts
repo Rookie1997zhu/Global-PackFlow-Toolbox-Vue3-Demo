@@ -12,6 +12,9 @@ import { csv, download, normalizeHeader, parseCsv } from '../../shared/export/cs
 
 export type RoundingRule = 'none' | 'round' | 'ceil'
 
+/** perPiece = each carton max(w,vol); perSku = line max then sum; shipment = ticket-level max. */
+export type ChargeMode = 'perPiece' | 'perSku' | 'shipment'
+
 export type CbmRowResult = {
   sku: string
   qty: number
@@ -28,6 +31,7 @@ export type CbmTotals = {
   grossKg: number
   volumetricKg: number
   chargeableKg: number
+  chargeMode: ChargeMode
   rows: CbmRowResult[]
   hasErrors: boolean
 }
@@ -47,16 +51,33 @@ export function computeCbmTotals(
   cargo: Cargo[],
   divisor: number,
   rounding: RoundingRule,
+  chargeMode: ChargeMode = 'shipment',
 ): CbmTotals {
   const safeDivisor = Math.max(1, n(divisor) || 6000)
+  const mode: ChargeMode = chargeMode || 'shipment'
+
   const rows: CbmRowResult[] = cargo.map((c) => {
     const { valid, errors } = validateCargoRow(c)
-    const qty = n(c.qty)
+    const qty = Math.max(0, n(c.qty))
+    const unitVolRaw = (n(c.length) * n(c.width) * n(c.height)) / safeDivisor
+    const unitGross = n(c.weight)
     const cbm = (n(c.length) * n(c.width) * n(c.height) * qty) / 1e6
-    const grossKg = n(c.weight) * qty
-    const volumetricRaw = (n(c.length) * n(c.width) * n(c.height) * qty) / safeDivisor
+    const grossKg = unitGross * qty
+    const volumetricRaw = unitVolRaw * qty
     const volumetricKg = applyRounding(volumetricRaw, rounding)
-    const chargeableKg = applyRounding(Math.max(grossKg, volumetricKg), rounding)
+
+    let chargeableKg: number
+    if (mode === 'perPiece') {
+      // Round per-piece billable then multiply by qty (carrier-style piece rating).
+      const perPiece = applyRounding(Math.max(unitGross, unitVolRaw), rounding)
+      chargeableKg = perPiece * qty
+    } else if (mode === 'perSku') {
+      chargeableKg = applyRounding(Math.max(grossKg, volumetricRaw), rounding)
+    } else {
+      // shipment: row shows line max for transparency; ticket total uses shipment rule below.
+      chargeableKg = applyRounding(Math.max(grossKg, volumetricRaw), rounding)
+    }
+
     return {
       sku: c.sku,
       qty,
@@ -76,13 +97,20 @@ export function computeCbmTotals(
     0,
   )
   const volumetricKg = applyRounding(volumetricRaw, rounding)
-  const chargeableKg = applyRounding(Math.max(grossKg, volumetricKg), rounding)
+
+  let chargeableKg: number
+  if (mode === 'perPiece' || mode === 'perSku') {
+    chargeableKg = rows.reduce((s, r) => s + r.chargeableKg, 0)
+  } else {
+    chargeableKg = applyRounding(Math.max(grossKg, volumetricRaw), rounding)
+  }
 
   return {
     cbm,
     grossKg,
     volumetricKg,
     chargeableKg,
+    chargeMode: mode,
     rows,
     hasErrors: rows.some((r) => !r.valid),
   }
@@ -210,10 +238,11 @@ export function exportCbmResultsCsv(
     divisor: string
     rounding: string
     total: string
+    chargeMode?: string
   },
 ): void {
   const rows: (string | number)[][] = [
-    [headers.divisor, divisor, headers.rounding, rounding],
+    [headers.divisor, divisor, headers.rounding, rounding, headers.chargeMode || 'mode', totals.chargeMode],
     [
       headers.sku,
       headers.qty,

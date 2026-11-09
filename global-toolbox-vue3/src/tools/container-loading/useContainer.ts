@@ -43,10 +43,29 @@ export function resolveContainer(
   }
 }
 
+export function groupUnplacedReasons(
+  unplaced: PackResult['unplaced'],
+  t: (k: string) => string,
+): { reason: string; qty: number; names: string[] }[] {
+  const map = new Map<string, { reason: string; qty: number; names: string[] }>()
+  for (const u of unplaced) {
+    const label = t(u.reason)
+    const prev = map.get(u.reason)
+    if (prev) {
+      prev.qty += u.qty
+      if (!prev.names.includes(u.name)) prev.names.push(u.name)
+    } else {
+      map.set(u.reason, { reason: label, qty: u.qty, names: [u.name] })
+    }
+  }
+  return [...map.values()]
+}
+
 export function exportPackCsv(result: PackResult, containerLabel: string, t: (k: string) => string): void {
   const rows: (string | number)[][] = [
     [t('containerType'), containerLabel, t('volumeUtil'), Number(result.volumeUtilPct.toFixed(2)), t('payloadUtil'), Number(result.weightUtilPct.toFixed(2))],
     [t('containerPacked'), result.packedCount, t('containerUnpacked'), result.totalCount - result.packedCount],
+    [t('containerSafetyHint')],
     [],
     ['SKU', 'X', 'Y', 'Z', 'L', 'W', 'H', t('weight'), t('orientation')],
     ...result.placements.map((p) => [
@@ -62,7 +81,10 @@ export function exportPackCsv(result: PackResult, containerLabel: string, t: (k:
     ]),
     [],
     [t('containerUnplaced'), 'SKU', t('colQty'), t('nestingReason')],
-    ...result.unplaced.map((u) => [u.name, u.qty, u.reason]),
+    ...result.unplaced.map((u) => [u.name, u.qty, t(u.reason)]),
+    [],
+    [t('unplacedByReason')],
+    ...groupUnplacedReasons(result.unplaced, t).map((g) => [g.reason, g.qty, g.names.join('; ')]),
   ]
   download('container-loading.csv', csv(rows))
 }

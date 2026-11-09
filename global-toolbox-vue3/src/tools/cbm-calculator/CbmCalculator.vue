@@ -10,6 +10,7 @@ import {
   displayToCargo,
   exportCbmResultsCsv,
   importCargoCsv,
+  type ChargeMode,
   type RoundingRule,
 } from './useCbm'
 
@@ -24,6 +25,7 @@ const { cargo, qty, setCargo } = useCargo()
 
 const dimDivisor = ref(6000)
 const rounding = ref<RoundingRule>('none')
+const chargeMode = ref<ChargeMode>('shipment')
 const lengthUnit = ref<LengthUnit>('cm')
 const massUnit = ref<MassUnit>('kg')
 const importError = ref('')
@@ -31,7 +33,9 @@ const fileInput = ref<HTMLInputElement | null>(null)
 
 const format = (v: number, d = 2) => formatNumber(v, hostLocale.value, d)
 
-const totals = computed(() => computeCbmTotals(cargo.value, dimDivisor.value, rounding.value))
+const totals = computed(() =>
+  computeCbmTotals(cargo.value, dimDivisor.value, rounding.value, chargeMode.value),
+)
 
 const displayRows = computed(() =>
   cargo.value.map((c) => cargoToDisplay(c, lengthUnit.value, massUnit.value)),
@@ -73,6 +77,7 @@ const exportResults = () => {
     divisor: props.t('dimDivisor'),
     rounding: props.t('roundingRule'),
     total: props.t('total'),
+    chargeMode: props.t('chargeMode'),
   })
 }
 </script>
@@ -101,6 +106,15 @@ const exportResults = () => {
             <option value="ceil">{{ t('roundCeil') }}</option>
           </select>
         </label>
+        <label class="field">
+          {{ t('chargeMode') }}
+          <select v-model="chargeMode">
+            <option value="shipment">{{ t('chargeModeShipment') }}</option>
+            <option value="perSku">{{ t('chargeModePerSku') }}</option>
+            <option value="perPiece">{{ t('chargeModePerPiece') }}</option>
+          </select>
+        </label>
+        <p class="field-hint">{{ t('chargeModeHint') }}</p>
         <label class="field">
           {{ t('lengthUnit') }}
           <select v-model="lengthUnit">

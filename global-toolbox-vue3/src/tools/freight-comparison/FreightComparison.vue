@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, inject, ref, type Ref } from 'vue'
+import { computed, inject, reactive, ref, type Ref } from 'vue'
 import type { Locale } from '../../i18n'
 import { useCargo } from '../../shared/cargo/useCargo'
 import { formatNumber } from '../../shared/format/number'
@@ -25,18 +25,38 @@ const dimDivisor = ref(6000)
 const rounding = ref<RoundingRule>('none')
 const rates = ref<FreightRateConfig[]>(defaultFreightConfigs())
 const pdfBusy = ref(false)
+const displayCurrency = ref('USD')
+const fxAsOf = ref(new Date().toISOString().slice(0, 10))
+const ratesToDisplay = reactive<Record<string, number>>({
+  USD: 1,
+  EUR: 1.08,
+})
 
 const format = (v: number, d = 2) => formatNumber(v, hostLocale.value, d)
 
 const cbmTotals = computed(() => computeCbmTotals(cargo.value, dimDivisor.value, rounding.value))
 const comparison = computed(() =>
-  compareFreight(rates.value, cbmTotals.value.chargeableKg, cbmTotals.value.cbm, rounding.value),
+  compareFreight(rates.value, cbmTotals.value.chargeableKg, cbmTotals.value.cbm, rounding.value, {
+    displayCurrency: displayCurrency.value,
+    ratesToDisplay: { ...ratesToDisplay },
+    fxAsOf: fxAsOf.value,
+  }),
 )
+
+const usedCurrencies = computed(() => {
+  const set = new Set(rates.value.map((r) => String(r.currency || 'USD').trim().toUpperCase() || 'USD'))
+  set.add(String(displayCurrency.value || 'USD').trim().toUpperCase() || 'USD')
+  return [...set]
+})
 
 const updateRate = <K extends keyof FreightRateConfig>(index: number, key: K, value: FreightRateConfig[K]) => {
   const next = [...rates.value]
   next[index] = { ...next[index], [key]: value }
   rates.value = next
+  if (key === 'currency') {
+    const code = String(value || 'USD').trim().toUpperCase() || 'USD'
+    if (ratesToDisplay[code] === undefined) ratesToDisplay[code] = code === displayCurrency.value ? 1 : 0
+  }
 }
 
 const exportCsv = () => {
@@ -51,6 +71,7 @@ const exportCsv = () => {
     {
       mode: props.t('freightMode'),
       total: props.t('freightTotal'),
+      converted: props.t('freightConverted'),
       delta: props.t('freightDelta'),
       currency: props.t('currency'),
       eta: props.t('freightEta'),
@@ -63,6 +84,7 @@ const exportCsv = () => {
       volume: props.t('totalCbm'),
       rounding: props.t('roundingRule'),
       note: props.t('note'),
+      displayCurrency: props.t('freightDisplayCurrency'),
     },
     props.t,
   )
@@ -112,6 +134,27 @@ const exportPdf = async () => {
             <option value="ceil">{{ t('roundCeil') }}</option>
           </select>
         </label>
+        <label class="field">
+          {{ t('freightDisplayCurrency') }}
+          <input v-model="displayCurrency" />
+        </label>
+        <label class="field">
+          {{ t('freightFxAsOf') }}
+          <input v-model="fxAsOf" type="date" />
+        </label>
+        <div v-for="code in usedCurrencies" :key="code" class="field">
+          <label>
+            {{ t('freightFxRate') }} (1 {{ code }} → {{ displayCurrency }})
+            <input
+              :value="ratesToDisplay[code] ?? (code.toUpperCase() === displayCurrency.toUpperCase() ? 1 : 0)"
+              type="number"
+              min="0"
+              step="0.0001"
+              @change="ratesToDisplay[code] = Number(($event.target as HTMLInputElement).value)"
+            />
+          </label>
+        </div>
+        <p v-if="!comparison.comparable" class="field-hint warn">{{ t('freightFxMissing') }}</p>
         <p class="field-hint">{{ t('freightSimDisclaimer') }}</p>
 
         <div v-for="(rate, i) in rates" :key="rate.id" style="margin-top: 14px; padding-top: 12px; border-top: 1px solid #e5ebf1">
@@ -206,22 +249,35 @@ const exportPdf = async () => {
             <span>{{ t('totalVolume') }}</span>
             <strong>{{ format(cbmTotals.cbm, 3) }}<small> m³</small></strong>
           </div>
+          <div class="metric">
+            <span>{{ t('freightCheapest') }}</span>
+            <strong>{{ comparison.cheapestId ? t(comparison.options.find((o) => o.id === comparison.cheapestId)?.labelKey || '') : t('freightNoCheapest') }}</strong>
+          </div>
         </div>
         <p class="field-hint">{{ t('freightSimDisclaimer') }}</p>
         <div class="freight-list">
-          <div v-for="o in comparison.options" :key="o.id">
+          <div
+            v-for="o in comparison.options"
+            :key="o.id"
+            :class="{ cheapest: comparison.comparable && o.id === comparison.cheapestId }"
+          >
             <div>
-              <strong>{{ t(o.labelKey) }}</strong>
+              <strong>{{ t(o.labelKey) }} <span v-if="comparison.comparable && o.id === comparison.cheapestId">★</span></strong>
               <small>
                 {{ t('illustrativeEstimate') }}
                 · {{ t('freightEta') }} {{ o.etaDays }}d
-                · Δ {{ o.currency }} {{ format(o.deltaFromCheapest) }}
+                · Δ
+                <template v-if="o.deltaFromCheapest === null">n/a</template>
+                <template v-else>{{ comparison.displayCurrency }} {{ format(o.deltaFromCheapest) }}</template>
               </small>
               <small style="display:block;margin-top:4px">
                 {{ t('freightBillable') }} {{ format(o.billableQty, 3) }}
                 · {{ t('freightMinCharge') }} {{ format(o.minCharge) }}
                 · {{ t('freightFixedFee') }} {{ format(o.fixedFee) }}
                 · {{ t('freightPercentSurcharge') }} {{ format(o.percentSurcharge, 1) }}%
+              </small>
+              <small v-if="o.convertedTotal !== null" style="display:block;margin-top:2px">
+                {{ t('freightConverted') }}: {{ comparison.displayCurrency }} {{ format(o.convertedTotal) }}
               </small>
             </div>
             <strong>{{ o.currency }} {{ format(o.total) }}</strong>
@@ -232,3 +288,13 @@ const exportPdf = async () => {
     </div>
   </div>
 </template>
+
+<style scoped>
+.warn { color: #b45309; }
+.freight-list .cheapest {
+  outline: 1px solid #0d8a7d;
+  background: #f3fbfa;
+  border-radius: 10px;
+  padding: 8px;
+}
+</style>

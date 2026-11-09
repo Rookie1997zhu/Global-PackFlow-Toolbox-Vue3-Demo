@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
+import { applyMapping, detectColumnMapping } from '../shared/import/sheetMapping'
 import {
   computeInvoiceTotals,
   lineAmount,
   linesFromCargo,
+  linesFromMapped,
   validateInvoice,
 } from '../tools/commercial-invoice/useInvoice'
 
@@ -41,5 +43,15 @@ describe('commercial invoice', () => {
         'errInvoiceLines',
       ]),
     )
+  })
+
+  it('builds invoice lines from Korean mapped rows', () => {
+    const table = [
+      ['품명', '규격', '수량', '단위', '단가', '금액'],
+      ['SKU-A', 'Gift box', '120', 'PCS', '12.5', '1500'],
+    ]
+    const lines = linesFromMapped(applyMapping(table, detectColumnMapping(table[0])))
+    expect(lines[0]).toMatchObject({ sku: 'SKU-A', description: 'Gift box', qty: 120, unitPrice: 12.5, unit: 'PCS' })
+    expect(lineAmount(lines[0])).toBeCloseTo(1500, 6)
   })
 })

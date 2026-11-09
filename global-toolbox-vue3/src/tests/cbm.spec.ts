@@ -61,4 +61,26 @@ describe('cbm calculator', () => {
     expect(result.rows[0].weight).toBe(8)
     expect(result.rows[0].qty).toBe(2)
   })
+
+  it('distinguishes shipment, perSku and perPiece charge modes', () => {
+    const mixed: Cargo[] = [
+      { sku: 'LIGHT', length: 60, width: 40, height: 40, weight: 1, qty: 2, price: 0 },
+      { sku: 'HEAVY', length: 20, width: 20, height: 20, weight: 20, qty: 3, price: 0 },
+    ]
+    // LIGHT unit vol = 16; HEAVY unit vol ≈ 1.333
+    const shipment = computeCbmTotals(mixed, 6000, 'none', 'shipment')
+    const perSku = computeCbmTotals(mixed, 6000, 'none', 'perSku')
+    // shipment: gross=62; vol≈36 → 62; perSku: 32+60=92
+    expect(shipment.chargeableKg).toBeCloseTo(62, 4)
+    expect(perSku.chargeableKg).toBeCloseTo(92, 4)
+
+    // ceil makes per-piece diverge from per-SKU: unit vol 4.1 → ceil 5 * 2 = 10; line vol 8.2 → ceil 9
+    const pieceCase: Cargo[] = [
+      { sku: 'P', length: 41, width: 30, height: 20, weight: 1, qty: 2, price: 0 },
+    ]
+    const perSkuCeil = computeCbmTotals(pieceCase, 6000, 'ceil', 'perSku')
+    const perPieceCeil = computeCbmTotals(pieceCase, 6000, 'ceil', 'perPiece')
+    expect(perSkuCeil.chargeableKg).toBe(9)
+    expect(perPieceCeil.chargeableKg).toBe(10)
+  })
 })

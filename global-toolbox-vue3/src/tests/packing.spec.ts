@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest'
+import { applyMapping, detectColumnMapping } from '../shared/import/sheetMapping'
 import {
   computePackingTotals,
   cartonCountOf,
   lineCbm,
   packingFromCargo,
+  packingFromMapped,
   validatePackingLines,
 } from '../tools/packing-list/usePacking'
 
@@ -41,5 +43,18 @@ describe('packing list', () => {
     ])
     expect(codes).toContain('errPackingCartonRange')
     expect(codes).toContain('errPackingNetGross')
+  })
+
+  it('builds packing lines from Korean mapped rows', () => {
+    const table = [
+      ['품명', '카톤번호', '수량', '총중량', '순중량', '가로', '세로', '높이', '박스수'],
+      ['SKU-A', '1', '120', '7.5', '6.9', '42', '32', '28', '120'],
+    ]
+    const lines = packingFromMapped(applyMapping(table, detectColumnMapping(table[0])))
+    expect(lines[0].sku).toBe('SKU-A')
+    expect(lines[0].cartonFrom).toBe(1)
+    expect(lines[0].cartonTo).toBe(120)
+    expect(lines[0].qtyPerCarton).toBe(1)
+    expect(lines[0].grossKg).toBeCloseTo(7.5, 6)
   })
 })

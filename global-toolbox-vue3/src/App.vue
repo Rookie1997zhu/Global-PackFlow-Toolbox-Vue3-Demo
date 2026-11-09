@@ -1,9 +1,20 @@
 <script setup lang="ts">
-import { computed, ref, watch, defineAsyncComponent, provide } from 'vue'
+import { computed, onMounted, ref, watch, defineAsyncComponent, provide } from 'vue'
 import { type Locale, messages, categoryKeys } from './i18n'
 import { useCargo } from './shared/cargo/useCargo'
 import { formatNumber } from './shared/format/number'
 import { unitDefs } from './shared/units'
+import { buildScheme, type CargoScheme } from './shared/persistence/scheme'
+import {
+  deleteScheme,
+  exportSchemeFile,
+  getAutoRestoreEnabled,
+  importSchemeFile,
+  listSchemes,
+  loadLatestScheme,
+  saveCargoAsScheme,
+  setAutoRestoreEnabled,
+} from './shared/persistence/schemeStore'
 import CbmCalculator from './tools/cbm-calculator/CbmCalculator.vue'
 import FreightComparison from './tools/freight-comparison/FreightComparison.vue'
 import SheetNesting from './tools/sheet-nesting/SheetNesting.vue'
@@ -33,10 +44,54 @@ const tools:{id:ToolId;icon:string;category:string;paid:boolean}[]=[
 const active=ref<ToolId|null>(null),search=ref(''),category=ref('All'),showData=ref(false),mobileNav=ref(false),showPricing=ref(false)
 const categories=['All','Packaging','Loading','Freight','Documents','Warehouse']
 const visibleTools=computed(()=>tools.filter(x=>(category.value==='All'||x.category===category.value)&&(`${titles[x.id].join(' ')} ${descriptions[x.id].join(' ')}`.toLowerCase().includes(search.value.toLowerCase()))))
-const { cargo, cbm, gross, qty, goodsValue, addCargo, removeCargo, reset: resetCargo, exportCargo: exportCargoRows, n } = useCargo()
+const { cargo, cbm, gross, qty, goodsValue, addCargo, removeCargo, reset: resetCargo, setCargo, exportCargo: exportCargoRows, n } = useCargo()
 const format=(v:number,d=2)=>formatNumber(v, locale.value, d)
 const reset=()=>{resetCargo()}
 const exportCargo=()=>exportCargoRows([t('colSku'),t('lengthCm'),t('widthCm'),t('heightCm'),t('weightKg'),t('colQty'),t('unitPriceUsd')])
+const schemeName=ref('KR demo scheme')
+const schemeList=ref<CargoScheme[]>([])
+const schemeMsg=ref('')
+const autoRestore=ref(getAutoRestoreEnabled())
+const refreshSchemes=async()=>{try{schemeList.value=await listSchemes()}catch{schemeList.value=[]}}
+const saveScheme=async()=>{
+  schemeMsg.value=''
+  try{
+    await saveCargoAsScheme({name:schemeName.value,cargo:cargo.value,locale:locale.value})
+    schemeMsg.value=t('schemeSaved')
+    await refreshSchemes()
+  }catch(err){schemeMsg.value=err instanceof Error?err.message:String(err)}
+}
+const restoreScheme=async(id:string)=>{
+  const found=schemeList.value.find(s=>s.id===id)
+  if(!found)return
+  setCargo(found.cargo.map(c=>({...c})))
+  schemeMsg.value=t('schemeRestored')
+}
+const exportSchemeJson=()=>{
+  exportSchemeFile(buildScheme({name:schemeName.value,cargo:cargo.value,locale:locale.value}))
+}
+const onImportScheme=async(e:Event)=>{
+  const input=e.target as HTMLInputElement
+  const file=input.files?.[0]
+  input.value=''
+  if(!file)return
+  try{
+    const scheme=await importSchemeFile(file)
+    setCargo(scheme.cargo.map(c=>({...c})))
+    schemeName.value=scheme.name
+    schemeMsg.value=t('schemeRestored')
+    await refreshSchemes()
+  }catch(err){schemeMsg.value=err instanceof Error?err.message:t('errSchemeInvalid')}
+}
+const removeScheme=async(id:string)=>{await deleteScheme(id);await refreshSchemes()}
+watch(autoRestore,(v)=>setAutoRestoreEnabled(v))
+onMounted(async()=>{
+  await refreshSchemes()
+  try{
+    const latest=await loadLatestScheme()
+    if(latest?.cargo?.length){setCargo(latest.cargo.map(c=>({...c})));schemeName.value=latest.name}
+  }catch{/* ignore missing IDB */}
+})
 const heroContainerVol=1203*235*269/1e6
 const volUtil=computed(()=>heroContainerVol?cbm.value/heroContainerVol*100:0)
 const warehouseL=ref(30),warehouseW=ref(20),warehouseH=ref(6),aislePct=ref(35),rackLevels=ref(3),rackCapacity=ref(2.5)
@@ -84,12 +139,12 @@ const activePaid=computed(()=>!!tools.find(x=>x.id===active.value)?.paid)
         <div class="page-heading"><button class="back" @click="back">← {{t('all')}}</button><div class="eyebrow dark">{{t('pricingEyebrow')}}</div><h1>{{t('pricing')}}</h1><p>{{t('billing')}}</p></div><div class="pricing-grid"><div v-for="plan in pricingPlans" :key="plan.nameKey" class="price-card"><h3>{{t(plan.nameKey)}}</h3><strong>{{plan.price}}<small> {{t('perMonth')}}</small></strong><p>{{t(plan.descKey)}}</p><ul><li v-for="f in plan.features" :key="f">✓ {{t(f)}}</li></ul><button disabled>{{t('comingLater')}}</button></div></div>
       </template>
       <template v-else-if="showData">
-        <div class="page-heading"><button class="back" @click="back">← {{t('all')}}</button><div class="eyebrow dark">{{t('sharedEyebrow')}}</div><h1>{{t('shared')}}</h1><p>{{t('sharedDesc')}}</p></div><div class="panel"><div class="panel-heading"><h3>{{t('cargoItems')}}</h3><div class="btn-row"><button class="btn-secondary" @click="reset">{{t('reset')}}</button><button class="btn-secondary" @click="exportCargo">{{t('export')}}</button><button class="btn-primary" @click="addCargo">+ {{t('add')}}</button></div></div><div class="table-scroll"><table><thead><tr><th>{{t('name')}}</th><th>{{t('length')}} cm</th><th>{{t('width')}} cm</th><th>{{t('height')}} cm</th><th>{{t('weight')}} kg</th><th>{{t('quantity')}}</th><th>{{t('price')}} USD</th><th></th></tr></thead><tbody><tr v-for="(c,i) in cargo" :key="i"><td><input v-model="c.sku" class="cell-name" /></td><td><input v-model.number="c.length" type="number" min="0" /></td><td><input v-model.number="c.width" type="number" min="0" /></td><td><input v-model.number="c.height" type="number" min="0" /></td><td><input v-model.number="c.weight" type="number" min="0" step="0.1" /></td><td><input v-model.number="c.qty" type="number" min="0" step="1" /></td><td><input v-model.number="c.price" type="number" min="0" step="0.1" /></td><td><button class="remove" @click="removeCargo(i)">×</button></td></tr></tbody></table></div><div class="data-summary"><span>{{qty}} {{t('pcs')}}</span><span>{{format(cbm)}} m³</span><span>{{format(gross)}} kg</span><span>${{format(goodsValue)}}</span></div></div>
+        <div class="page-heading"><button class="back" @click="back">← {{t('all')}}</button><div class="eyebrow dark">{{t('sharedEyebrow')}}</div><h1>{{t('shared')}}</h1><p>{{t('sharedDesc')}}</p></div><div class="panel"><div class="panel-heading"><h3>{{t('cargoItems')}}</h3><div class="btn-row"><button class="btn-secondary" @click="reset">{{t('reset')}}</button><button class="btn-secondary" @click="exportCargo">{{t('export')}}</button><button class="btn-primary" @click="addCargo">+ {{t('add')}}</button></div></div><div class="table-scroll"><table><thead><tr><th>{{t('name')}}</th><th>{{t('length')}} cm</th><th>{{t('width')}} cm</th><th>{{t('height')}} cm</th><th>{{t('weight')}} kg</th><th>{{t('quantity')}}</th><th>{{t('price')}} USD</th><th></th></tr></thead><tbody><tr v-for="(c,i) in cargo" :key="i"><td><input v-model="c.sku" class="cell-name" /></td><td><input v-model.number="c.length" type="number" min="0" /></td><td><input v-model.number="c.width" type="number" min="0" /></td><td><input v-model.number="c.height" type="number" min="0" /></td><td><input v-model.number="c.weight" type="number" min="0" step="0.1" /></td><td><input v-model.number="c.qty" type="number" min="0" step="1" /></td><td><input v-model.number="c.price" type="number" min="0" step="0.1" /></td><td><button class="remove" @click="removeCargo(i)">×</button></td></tr></tbody></table></div><div class="data-summary"><span>{{qty}} {{t('pcs')}}</span><span>{{format(cbm)}} m³</span><span>{{format(gross)}} kg</span><span>${{format(goodsValue)}}</span></div><div style="margin-top:16px;padding-top:14px;border-top:1px solid #e5ebf1"><h3 style="margin:0 0 8px;font-size:14px">{{t('schemeBackup')}}</h3><p class="field-hint">{{t('schemeBackupHint')}}</p><label class="field">{{t('schemeName')}}<input v-model="schemeName"/></label><label class="field" style="display:flex;align-items:center;gap:8px;margin-top:8px"><input type="checkbox" v-model="autoRestore"/> {{t('schemeAutoRestore')}}</label><div class="btn-row" style="margin-top:8px;flex-wrap:wrap;gap:8px"><button class="btn-primary" type="button" @click="saveScheme">{{t('schemeSave')}}</button><button class="btn-secondary" type="button" @click="exportSchemeJson">{{t('schemeExportJson')}}</button><label class="btn-secondary" style="display:inline-flex;align-items:center;cursor:pointer">{{t('schemeImportJson')}}<input type="file" accept=".json,application/json" hidden @change="onImportScheme"/></label></div><p v-if="schemeMsg" class="field-hint">{{schemeMsg}}</p><ul v-if="schemeList.length" style="margin:10px 0 0;padding-left:18px"><li v-for="s in schemeList" :key="s.id" style="margin:6px 0"><strong>{{s.name}}</strong> <small>{{s.updatedAt}}</small> · <button class="linkish" type="button" @click="restoreScheme(s.id)">{{t('schemeRestore')}}</button> · <button class="linkish" type="button" @click="removeScheme(s.id)">{{t('schemeDelete')}}</button></li></ul></div></div>
       </template>
       <template v-else-if="active">
         <div class="page-heading"><button class="back" @click="back">← {{t('all')}}</button><div class="eyebrow dark">{{catLabel(activeCategory)}} / {{activePaid?t('proTool'):t('freeTool')}}</div><h1>{{titles[active][idx]}}</h1><p>{{descriptions[active][idx]}}</p></div>
         <DielineTool v-if="active==='dieline'" />
-        <PalletOptimizer v-else-if="active==='pallet'" />
+        <PalletOptimizer v-else-if="active==='pallet'" :t="t" />
         <CbmCalculator v-else-if="active==='cbm'" :t="t" @edit-cargo="openSharedData" />
         <FreightComparison v-else-if="active==='freight'" :t="t" @edit-cargo="openSharedData" />
         <SheetNesting v-else-if="active==='nesting'" :t="t" />

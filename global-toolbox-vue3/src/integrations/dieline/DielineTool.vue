@@ -44,13 +44,23 @@ function assetUrl(path){return publicAssetUrl(path)}
 const {t,locale}=useI18n()
 function switchLocale(code){setLocale(code)}
 const hostLocale=inject('hostLocale',null)
+const hostLocaleUnsupported=ref(false)
 function mapHostLocale(code){
   if(code==='ko')return 'ko-KR'
   if(code==='zh')return 'zh-CN'
-  return 'zh-CN'
+  return null
 }
 if(hostLocale){
-  watch(hostLocale,(code)=>setLocale(mapHostLocale(code)),{immediate:true})
+  watch(hostLocale,(code)=>{
+    const mapped=mapHostLocale(code)
+    if(mapped){
+      hostLocaleUnsupported.value=false
+      setLocale(mapped)
+    }else{
+      // en (and unknown): do not force Chinese; keep user's last zh/ko choice.
+      hostLocaleUnsupported.value=true
+    }
+  },{immediate:true})
 }
 function kindLabel(tpl){
   const k=structureKind(tpl)
@@ -944,6 +954,9 @@ onBeforeUnmount(()=>{
 </script>
 <template>
 <div class="dieline-tool">
+<p v-if="hostLocaleUnsupported" class="field-hint" style="margin:8px 12px;padding:8px 12px;background:#fff8e8;border:1px solid #e6d3a8;border-radius:8px;color:#7a4e12">
+  Dieline UI currently supports Chinese and Korean only. Host English will not force Chinese; use the language chips below.
+</p>
 <header>
   <div class="brand"><span class="brandmark"><Box :size="22"/></span><div><strong>BOXCRAFT <span>LAB</span></strong><small>{{t('brand.subtitle')}}</small></div></div>
   <div class="headright">

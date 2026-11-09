@@ -3,6 +3,9 @@ import { computed, inject, reactive, ref, watch, type Ref } from 'vue'
 import type { Locale } from '../../i18n'
 import { useCargo } from '../../shared/cargo/useCargo'
 import { formatNumber } from '../../shared/format/number'
+import { parseCsv } from '../../shared/export/csv'
+import SheetImportPanel from '../../shared/import/SheetImportPanel.vue'
+import { applyMapping, detectColumnMapping, type MappedRow } from '../../shared/import/sheetMapping'
 import {
   computeInvoiceTotals,
   exportInvoiceCsv,
@@ -10,6 +13,7 @@ import {
   exportInvoiceXlsx,
   lineAmount,
   linesFromCargo,
+  linesFromMapped,
   validateInvoice,
   type InvoiceLine,
   type InvoiceMeta,
@@ -32,11 +36,14 @@ const meta = reactive<InvoiceMeta>({
   paymentTerms: 'T/T 30 days',
 })
 
+const linesLocked = ref(false)
 const lines = ref<InvoiceLine[]>(linesFromCargo(cargo.value))
+const sampleError = ref('')
 
 watch(
   cargo,
   (rows) => {
+    if (linesLocked.value) return
     lines.value = linesFromCargo(rows)
   },
   { deep: true },
@@ -63,7 +70,32 @@ const labels = computed(() => ({
 }))
 
 const syncFromCargo = () => {
+  linesLocked.value = false
   lines.value = linesFromCargo(cargo.value)
+}
+
+const onImportApplied = (rows: MappedRow[]) => {
+  linesLocked.value = true
+  lines.value = linesFromMapped(rows)
+  if (rows[0]?.po) meta.po = rows[0].po
+}
+
+const loadKrSample = async () => {
+  sampleError.value = ''
+  try {
+    const res = await fetch('/samples/kr-invoice.csv')
+    const table = parseCsv(await res.text())
+    const mapping = detectColumnMapping(table[0] || [])
+    onImportApplied(applyMapping(table, mapping))
+    meta.seller = '한국수출(주)'
+    meta.buyer = 'Buyer Co., Ltd.'
+    meta.invoiceNo = 'INV-KR-2026-001'
+    meta.currency = 'USD'
+    meta.incoterms = 'FOB'
+    meta.paymentTerms = 'T/T 30 days'
+  } catch (err) {
+    sampleError.value = err instanceof Error ? err.message : String(err)
+  }
 }
 </script>
 
@@ -83,13 +115,19 @@ const syncFromCargo = () => {
           </select>
         </label>
         <label class="field">{{ t('paymentTerms') }}<input v-model="meta.paymentTerms" /></label>
-        <button class="btn-secondary full" @click="syncFromCargo">{{ t('syncFromCargo') }}</button>
+        <button class="btn-secondary full" type="button" @click="syncFromCargo">{{ t('syncFromCargo') }}</button>
+        <button class="btn-secondary full" type="button" @click="loadKrSample">{{ t('loadKrSample') }}</button>
+        <p v-if="linesLocked" class="field-hint">{{ t('linesLockedHint') }}</p>
+        <p v-if="sampleError" class="field-hint warn">{{ sampleError }}</p>
         <p v-if="issues.length" class="field-hint warn">{{ issues.map((c) => t(c)).join(' · ') }}</p>
+        <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e5ebf1">
+          <SheetImportPanel :t="t" :title="t('importInvoiceSheet')" @applied="onImportApplied" />
+        </div>
       </div>
       <div class="mini-panel">
         <span>▧</span>
         <div><strong>{{ lines.length }} {{ t('items') }} · {{ format(totals.computedTotal) }} {{ meta.currency }}</strong><p>{{ t('sharedDesc') }}</p></div>
-        <button @click="emit('editCargo')">{{ t('edit') }} ↗</button>
+        <button type="button" @click="emit('editCargo')">{{ t('edit') }} ↗</button>
       </div>
     </div>
     <div class="tool-output">
@@ -119,11 +157,11 @@ const syncFromCargo = () => {
               </thead>
               <tbody>
                 <tr v-for="line in lines" :key="line.sku + line.description">
-                  <td><input v-model="line.sku" /></td>
-                  <td><input v-model="line.description" /></td>
-                  <td><input v-model.number="line.qty" type="number" min="0" /></td>
-                  <td><input v-model="line.unit" /></td>
-                  <td><input v-model.number="line.unitPrice" type="number" min="0" step="0.01" /></td>
+                  <td><input v-model="line.sku" @input="linesLocked = true" /></td>
+                  <td><input v-model="line.description" @input="linesLocked = true" /></td>
+                  <td><input v-model.number="line.qty" type="number" min="0" @input="linesLocked = true" /></td>
+                  <td><input v-model="line.unit" @input="linesLocked = true" /></td>
+                  <td><input v-model.number="line.unitPrice" type="number" min="0" step="0.01" @input="linesLocked = true" /></td>
                   <td>{{ format(lineAmount(line)) }}</td>
                 </tr>
               </tbody>
@@ -137,9 +175,9 @@ const syncFromCargo = () => {
           </div>
         </div>
         <div class="action-row">
-          <button class="btn-secondary" @click="exportInvoiceCsv(meta, lines, labels)">{{ t('export') }}</button>
-          <button class="btn-secondary" @click="exportInvoiceXlsx(meta, lines, labels)">{{ t('exportXlsx') }}</button>
-          <button class="btn-primary" @click="exportInvoicePdf(meta, lines, t('commercialInvoice'), t('invoiceNoCustoms'))">{{ t('exportPdf') }}</button>
+          <button class="btn-secondary" type="button" @click="exportInvoiceCsv(meta, lines, labels)">{{ t('export') }}</button>
+          <button class="btn-secondary" type="button" @click="exportInvoiceXlsx(meta, lines, labels)">{{ t('exportXlsx') }}</button>
+          <button class="btn-primary" type="button" @click="exportInvoicePdf(meta, lines, t('commercialInvoice'), t('invoiceNoCustoms'))">{{ t('exportPdf') }}</button>
         </div>
         <p class="field-hint">{{ t('invoiceHint') }} · {{ t('invoiceNoCustoms') }}</p>
       </div>

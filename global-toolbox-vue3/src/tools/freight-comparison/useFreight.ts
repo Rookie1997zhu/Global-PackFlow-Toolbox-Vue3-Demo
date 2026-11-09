@@ -1,6 +1,6 @@
-import { PDFDocument, StandardFonts, rgb } from 'pdf-lib'
 import { applyRounding, type RoundingRule } from '../cbm-calculator/useCbm'
 import { csv, download } from '../../shared/export/csv'
+import { createKoreanPdfWriter } from '../../shared/export/pdf'
 import { sanitizeNonNegative } from '../../shared/validation'
 
 export type FreightBasis = 'chargeableKg' | 'cbm'
@@ -17,6 +17,13 @@ export type FreightRateConfig = {
   basis: FreightBasis
 }
 
+export type FreightFxOptions = {
+  displayCurrency: string
+  /** Units of displayCurrency per 1 unit of source currency. displayCurrency itself should be 1. */
+  ratesToDisplay: Record<string, number>
+  fxAsOf?: string
+}
+
 export type FreightLineResult = {
   id: string
   labelKey: string
@@ -27,21 +34,31 @@ export type FreightLineResult = {
   afterMin: number
   afterFixed: number
   total: number
+  convertedTotal: number | null
+  fxRate: number | null
   minCharge: number
   fixedFee: number
   percentSurcharge: number
   currency: string
   etaDays: number
-  deltaFromCheapest: number
+  deltaFromCheapest: number | null
 }
 
 export type FreightComparisonResult = {
   options: FreightLineResult[]
   cheapestId: string | null
+  comparable: boolean
+  displayCurrency: string
+  fxAsOf: string
+  missingCurrencies: string[]
 }
 
 function n(v: unknown): number {
   return sanitizeNonNegative(v)
+}
+
+function normCurrency(code: string): string {
+  return String(code || 'USD').trim().toUpperCase() || 'USD'
 }
 
 export function computeFreightLine(
@@ -49,7 +66,7 @@ export function computeFreightLine(
   chargeableKg: number,
   cbm: number,
   rounding: RoundingRule,
-): Omit<FreightLineResult, 'deltaFromCheapest'> {
+): Omit<FreightLineResult, 'deltaFromCheapest' | 'convertedTotal' | 'fxRate'> {
   const rawQty = config.basis === 'cbm' ? cbm : chargeableKg
   const billableQty = applyRounding(n(rawQty), rounding)
   const rate = n(config.rate)
@@ -71,26 +88,81 @@ export function computeFreightLine(
     minCharge: n(config.minCharge),
     fixedFee: n(config.fixedFee),
     percentSurcharge: n(config.percentSurcharge),
-    currency: config.currency || 'USD',
+    currency: normCurrency(config.currency),
     etaDays: n(config.etaDays),
   }
 }
 
+function resolveFxRate(
+  currency: string,
+  displayCurrency: string,
+  ratesToDisplay: Record<string, number>,
+): number | null {
+  const from = normCurrency(currency)
+  const to = normCurrency(displayCurrency)
+  if (from === to) return 1
+  const map: Record<string, number> = {}
+  for (const [k, v] of Object.entries(ratesToDisplay || {})) {
+    map[normCurrency(k)] = Number(v)
+  }
+  map[to] = 1
+  const rate = map[from]
+  if (!Number.isFinite(rate) || rate <= 0) return null
+  return rate
+}
+
+/** Compare freight options. Mixed currencies without FX suppress cheapest ranking. */
 export function compareFreight(
   configs: FreightRateConfig[],
   chargeableKg: number,
   cbm: number,
   rounding: RoundingRule,
+  fx: FreightFxOptions = { displayCurrency: 'USD', ratesToDisplay: { USD: 1 } },
 ): FreightComparisonResult {
+  const displayCurrency = normCurrency(fx.displayCurrency || 'USD')
+  const fxAsOf = String(fx.fxAsOf || '').trim()
   const lines = configs.map((c) => computeFreightLine(c, chargeableKg, cbm, rounding))
-  const sorted = [...lines].sort((a, b) => a.total - b.total)
-  const cheapest = sorted[0]?.total ?? 0
+  const missingCurrencies: string[] = []
+  const enriched = lines.map((line) => {
+    const fxRate = resolveFxRate(line.currency, displayCurrency, fx.ratesToDisplay)
+    if (fxRate === null && !missingCurrencies.includes(line.currency)) {
+      missingCurrencies.push(line.currency)
+    }
+    return {
+      ...line,
+      convertedTotal: fxRate === null ? null : line.total * fxRate,
+      fxRate,
+      deltaFromCheapest: null as number | null,
+    }
+  })
+
+  const comparable = missingCurrencies.length === 0 && enriched.every((o) => o.convertedTotal !== null)
+  if (!comparable) {
+    return {
+      options: enriched,
+      cheapestId: null,
+      comparable: false,
+      displayCurrency,
+      fxAsOf,
+      missingCurrencies,
+    }
+  }
+
+  const sorted = [...enriched].sort((a, b) => (a.convertedTotal ?? 0) - (b.convertedTotal ?? 0))
+  const cheapest = sorted[0]?.convertedTotal ?? 0
   const cheapestId = sorted[0]?.id ?? null
   const options = sorted.map((line) => ({
     ...line,
-    deltaFromCheapest: line.total - cheapest,
+    deltaFromCheapest: (line.convertedTotal ?? 0) - cheapest,
   }))
-  return { options, cheapestId }
+  return {
+    options,
+    cheapestId,
+    comparable: true,
+    displayCurrency,
+    fxAsOf,
+    missingCurrencies: [],
+  }
 }
 
 export function defaultFreightConfigs(): FreightRateConfig[] {
@@ -120,11 +192,11 @@ export function defaultFreightConfigs(): FreightRateConfig[] {
     {
       id: 'sea',
       labelKey: 'shipSeaLcl',
-      rate: 95,
-      minCharge: 120,
-      fixedFee: 35,
+      rate: 85,
+      minCharge: 110,
+      fixedFee: 30,
       percentSurcharge: 0,
-      currency: 'USD',
+      currency: 'EUR',
       etaDays: 28,
       basis: 'cbm',
     },
@@ -137,6 +209,7 @@ export function exportFreightCsv(
   headers: {
     mode: string
     total: string
+    converted: string
     delta: string
     currency: string
     eta: string
@@ -149,12 +222,22 @@ export function exportFreightCsv(
     volume: string
     rounding: string
     note: string
+    displayCurrency: string
   },
   labelOf: (key: string) => string,
 ): void {
   const rows: (string | number)[][] = [
     [headers.note, meta.disclaimer],
-    [headers.chargeable, meta.chargeableKg, headers.volume, meta.cbm, headers.rounding, meta.rounding],
+    [
+      headers.chargeable,
+      meta.chargeableKg,
+      headers.volume,
+      meta.cbm,
+      headers.rounding,
+      meta.rounding,
+      headers.displayCurrency,
+      result.displayCurrency,
+    ],
     [
       headers.mode,
       headers.billable,
@@ -163,6 +246,7 @@ export function exportFreightCsv(
       headers.fixedFee,
       headers.surcharge,
       headers.total,
+      headers.converted,
       headers.delta,
       headers.currency,
       headers.eta,
@@ -175,7 +259,8 @@ export function exportFreightCsv(
       o.fixedFee,
       o.percentSurcharge,
       Number(o.total.toFixed(2)),
-      Number(o.deltaFromCheapest.toFixed(2)),
+      o.convertedTotal === null ? '' : Number(o.convertedTotal.toFixed(2)),
+      o.deltaFromCheapest === null ? '' : Number(o.deltaFromCheapest.toFixed(2)),
       o.currency,
       o.etaDays,
     ]),
@@ -188,49 +273,39 @@ export async function exportFreightPdf(
   meta: { chargeableKg: number; cbm: number; rounding: RoundingRule; disclaimer: string; title: string },
   labelOf: (key: string) => string,
 ): Promise<void> {
-  const doc = await PDFDocument.create()
-  const page = doc.addPage([595, 842])
-  const font = await doc.embedFont(StandardFonts.Helvetica)
-  const bold = await doc.embedFont(StandardFonts.HelveticaBold)
-  let y = 800
-
-  const draw = (text: string, size = 11, useBold = false) => {
-    page.drawText(text, {
-      x: 40,
-      y,
-      size,
-      font: useBold ? bold : font,
-      color: rgb(0.12, 0.2, 0.3),
-    })
-    y -= size + 8
-  }
-
-  draw(meta.title, 16, true)
-  draw(meta.disclaimer, 9)
-  draw(
+  const writer = await createKoreanPdfWriter()
+  writer.drawLine(meta.title, 16, true)
+  writer.drawLine(meta.disclaimer, 9)
+  writer.drawLine(
     `Chargeable kg: ${meta.chargeableKg.toFixed(2)}  |  CBM: ${meta.cbm.toFixed(3)}  |  Rounding: ${meta.rounding}`,
     10,
   )
-  y -= 6
+  writer.drawLine(
+    `Display: ${result.displayCurrency}${result.fxAsOf ? `  FX as of ${result.fxAsOf}` : ''}${
+      result.comparable ? '' : '  |  cheapest ranking disabled (missing FX)'
+    }`,
+    9,
+  )
+  writer.drawLine('')
 
   for (const o of result.options) {
-    draw(
-      `${labelOf(o.labelKey)}  ${o.currency} ${o.total.toFixed(2)}  (Δ ${o.deltaFromCheapest.toFixed(2)})  ETA ${o.etaDays}d`,
+    const isCheapest = result.comparable && o.id === result.cheapestId
+    const delta =
+      o.deltaFromCheapest === null ? 'Δ n/a' : `Δ ${result.displayCurrency} ${o.deltaFromCheapest.toFixed(2)}`
+    const converted =
+      o.convertedTotal === null ? 'converted n/a' : `= ${result.displayCurrency} ${o.convertedTotal.toFixed(2)}`
+    writer.drawLine(
+      `${labelOf(o.labelKey)}  ${o.currency} ${o.total.toFixed(2)}  ${converted}  (${delta})  ETA ${o.etaDays}d${
+        isCheapest ? '  ★' : ''
+      }`,
       11,
-      o.id === result.cheapestId,
+      isCheapest,
     )
-    draw(
+    writer.drawLine(
       `  billable=${o.billableQty.toFixed(3)} rate=${o.rate} min=${o.minCharge} fixed=${o.fixedFee} surcharge=${o.percentSurcharge}%`,
       9,
     )
   }
 
-  const bytes = await doc.save()
-  const blob = new Blob([bytes], { type: 'application/pdf' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = 'freight-comparison.pdf'
-  a.click()
-  setTimeout(() => URL.revokeObjectURL(url), 1000)
+  await writer.finish('freight-comparison.pdf')
 }

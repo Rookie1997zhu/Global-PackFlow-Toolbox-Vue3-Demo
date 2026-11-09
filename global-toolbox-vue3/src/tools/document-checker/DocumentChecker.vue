@@ -3,14 +3,20 @@ import { computed, inject, ref, type Ref } from 'vue'
 import type { Locale } from '../../i18n'
 import { useCargo } from '../../shared/cargo/useCargo'
 import { formatNumber } from '../../shared/format/number'
+import SheetImportPanel from '../../shared/import/SheetImportPanel.vue'
+import type { MappedRow } from '../../shared/import/sheetMapping'
 import {
   exportDiffCsv,
+  exportDiffPdf,
   exportDiffXlsx,
-  loadCheckerFile,
+  loadSampleCsv,
+  mappedToCheckerRows,
   matchCheckerRows,
+  parseCheckerTable,
   summarizeDiffs,
   type CheckerRow,
   type DiffRow,
+  type MatchKeyMode,
 } from './useChecker'
 
 const props = defineProps<{ t: (key: string) => string }>()
@@ -20,28 +26,33 @@ const hostLocale = inject<Ref<Locale>>('hostLocale', ref('en'))
 const { qty, gross, goodsValue } = useCargo()
 const format = (v: number, d = 2) => formatNumber(v, hostLocale.value, d)
 
+const matchMode = ref<MatchKeyMode>('sku+carton')
 const expected = ref<CheckerRow[]>([])
 const actual = ref<CheckerRow[]>([])
-const expectedError = ref('')
-const actualError = ref('')
-const expectedInput = ref<HTMLInputElement | null>(null)
-const actualInput = ref<HTMLInputElement | null>(null)
+const loadError = ref('')
+const pdfBusy = ref(false)
 
-const diffs = computed<DiffRow[]>(() => matchCheckerRows(expected.value, actual.value))
+const diffs = computed<DiffRow[]>(() => matchCheckerRows(expected.value, actual.value, matchMode.value))
 const summary = computed(() => summarizeDiffs(diffs.value))
 
-const onLoad = async (side: 'expected' | 'actual', e: Event) => {
-  const input = e.target as HTMLInputElement
-  const file = input.files?.[0]
-  input.value = ''
-  if (!file) return
-  const result = await loadCheckerFile(file, side)
-  if (side === 'expected') {
-    expectedError.value = result.errorCode ? props.t(result.errorCode) : ''
-    expected.value = result.rows
-  } else {
-    actualError.value = result.errorCode ? props.t(result.errorCode) : ''
-    actual.value = result.rows
+const onExpectedApplied = (rows: MappedRow[]) => {
+  expected.value = mappedToCheckerRows(rows, 'expected', matchMode.value)
+}
+const onActualApplied = (rows: MappedRow[]) => {
+  actual.value = mappedToCheckerRows(rows, 'actual', matchMode.value)
+}
+
+const loadDemo = async () => {
+  loadError.value = ''
+  try {
+    const [expTable, actTable] = await Promise.all([
+      loadSampleCsv('/samples/kr-expected.csv'),
+      loadSampleCsv('/samples/kr-actual.csv'),
+    ])
+    expected.value = parseCheckerTable(expTable, 'expected', matchMode.value).rows
+    actual.value = parseCheckerTable(actTable, 'actual', matchMode.value).rows
+  } catch (err) {
+    loadError.value = err instanceof Error ? err.message : String(err)
   }
 }
 
@@ -51,8 +62,10 @@ const seedFromCargo = () => {
       key: 'sku::sample-total',
       sku: 'SAMPLE-TOTAL',
       carton: '',
+      po: '',
       qty: qty.value,
       weight: gross.value,
+      netKg: 0,
       amount: goodsValue.value,
       unit: 'PCS',
       source: 'expected',
@@ -61,19 +74,30 @@ const seedFromCargo = () => {
   ]
   expected.value = rows
   actual.value = rows.map((r) => ({ ...r, source: 'actual' as const }))
-  expectedError.value = ''
-  actualError.value = ''
 }
 
 const labels = computed(() => ({
   key: 'Key',
   sku: props.t('colSku'),
   carton: props.t('csvCarton'),
+  po: props.t('poLabel'),
   kind: 'Kind',
   expected: props.t('expected'),
   actual: props.t('declared'),
   message: 'Message',
+  fixHint: props.t('fixHint'),
+  expectedRow: props.t('expectedRow'),
+  actualRow: props.t('actualRow'),
 }))
+
+const exportPdf = async () => {
+  pdfBusy.value = true
+  try {
+    await exportDiffPdf(diffs.value, props.t('diffReportTitle'))
+  } finally {
+    pdfBusy.value = false
+  }
+}
 </script>
 
 <template>
@@ -81,20 +105,32 @@ const labels = computed(() => ({
     <div class="tool-settings">
       <div class="panel">
         <div class="panel-heading"><h3>{{ t('settings') }}</h3><span class="small-badge">{{ t('live') }}</span></div>
+        <label class="field">
+          {{ t('matchKeyMode') }}
+          <select v-model="matchMode">
+            <option value="sku+carton">{{ t('matchSkuCarton') }}</option>
+            <option value="sku">{{ t('matchSku') }}</option>
+            <option value="carton">{{ t('matchCarton') }}</option>
+            <option value="po+sku">{{ t('matchPoSku') }}</option>
+          </select>
+        </label>
         <p class="field-hint">{{ t('checkerImportHint') }}</p>
-        <button class="btn-secondary full" @click="expectedInput?.click()">{{ t('importExpected') }}</button>
-        <input ref="expectedInput" type="file" accept=".csv,.xlsx,.xls" hidden @change="onLoad('expected', $event)" />
-        <button class="btn-secondary full" @click="actualInput?.click()">{{ t('importActual') }}</button>
-        <input ref="actualInput" type="file" accept=".csv,.xlsx,.xls" hidden @change="onLoad('actual', $event)" />
-        <button class="btn-secondary full" @click="seedFromCargo">{{ t('matchComputed') }}</button>
-        <p v-if="expectedError" class="field-hint warn">{{ expectedError }}</p>
-        <p v-if="actualError" class="field-hint warn">{{ actualError }}</p>
+        <button class="btn-secondary full" type="button" @click="loadDemo">{{ t('loadDiffDemo') }}</button>
+        <button class="btn-secondary full" type="button" @click="seedFromCargo">{{ t('matchComputed') }}</button>
+        <p v-if="loadError" class="field-hint warn">{{ loadError }}</p>
         <p class="field-hint">{{ t('expected') }}: {{ expected.length }} · {{ t('declared') }}: {{ actual.length }}</p>
+
+        <div style="margin-top: 14px; padding-top: 12px; border-top: 1px solid #e5ebf1">
+          <SheetImportPanel :t="t" :title="t('importExpected')" @applied="onExpectedApplied" />
+        </div>
+        <div style="margin-top: 14px; padding-top: 12px; border-top: 1px solid #e5ebf1">
+          <SheetImportPanel :t="t" :title="t('importActual')" @applied="onActualApplied" />
+        </div>
       </div>
       <div class="mini-panel">
         <span>✓</span>
         <div><strong>{{ qty }} {{ t('items') }} · {{ format(gross) }} kg</strong><p>{{ t('sharedDesc') }}</p></div>
-        <button @click="emit('editCargo')">{{ t('edit') }} ↗</button>
+        <button type="button" @click="emit('editCargo')">{{ t('edit') }} ↗</button>
       </div>
     </div>
     <div class="tool-output">
@@ -107,26 +143,16 @@ const labels = computed(() => ({
         <div class="audit-list">
           <div v-for="(d, i) in diffs" :key="d.key + d.kind + i" :class="d.kind === 'ok' ? 'pass' : 'fail'">
             <span>{{ d.kind === 'ok' ? '✓' : '!' }} {{ t(d.messageCode) }} · {{ d.sku || d.carton || d.key }}</span>
-            <span>
-              <template v-if="d.expectedQty !== undefined || d.actualQty !== undefined">
-                {{ t('quantity') }} {{ d.expectedQty ?? '-' }} / {{ d.actualQty ?? '-' }}
-              </template>
-              <template v-if="d.expectedWeight !== undefined || d.actualWeight !== undefined">
-                · {{ t('weight') }} {{ d.expectedWeight ?? '-' }} / {{ d.actualWeight ?? '-' }}
-              </template>
-              <template v-if="d.expectedAmount !== undefined || d.actualAmount !== undefined">
-                · {{ t('price') }} {{ d.expectedAmount ?? '-' }} / {{ d.actualAmount ?? '-' }}
-              </template>
-              <template v-if="d.expectedUnit || d.actualUnit">
-                · {{ d.expectedUnit || '-' }} / {{ d.actualUnit || '-' }}
-              </template>
-            </span>
+            <span>{{ d.fixHint }}</span>
           </div>
           <p v-if="!diffs.length" class="field-hint">{{ t('checkerEmpty') }}</p>
         </div>
         <div class="action-row">
-          <button class="btn-secondary" :disabled="!diffs.length" @click="exportDiffCsv(diffs, labels)">{{ t('export') }}</button>
-          <button class="btn-secondary" :disabled="!diffs.length" @click="exportDiffXlsx(diffs, labels)">{{ t('exportXlsx') }}</button>
+          <button class="btn-secondary" type="button" :disabled="!diffs.length" @click="exportDiffCsv(diffs, labels)">{{ t('export') }}</button>
+          <button class="btn-secondary" type="button" :disabled="!diffs.length" @click="exportDiffXlsx(diffs, labels)">{{ t('exportXlsx') }}</button>
+          <button class="btn-primary" type="button" :disabled="!diffs.length || pdfBusy" @click="exportPdf">
+            {{ pdfBusy ? t('exporting') : t('exportPdf') }}
+          </button>
         </div>
         <p class="field-hint">{{ t('auditHint') }}</p>
       </div>

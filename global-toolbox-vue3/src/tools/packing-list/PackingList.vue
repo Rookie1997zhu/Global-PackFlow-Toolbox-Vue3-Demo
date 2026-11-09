@@ -3,6 +3,10 @@ import { computed, inject, ref, watch, type Ref } from 'vue'
 import type { Locale } from '../../i18n'
 import { useCargo } from '../../shared/cargo/useCargo'
 import { formatNumber } from '../../shared/format/number'
+import SheetImportPanel from '../../shared/import/SheetImportPanel.vue'
+import type { MappedRow } from '../../shared/import/sheetMapping'
+import { parseCsv } from '../../shared/export/csv'
+import { applyMapping, detectColumnMapping } from '../../shared/import/sheetMapping'
 import {
   computePackingTotals,
   exportPackingCsv,
@@ -10,6 +14,7 @@ import {
   exportPackingXlsx,
   lineCbm,
   packingFromCargo,
+  packingFromMapped,
   validatePackingLines,
   type PackingLine,
   cartonCountOf,
@@ -25,11 +30,14 @@ const format = (v: number, d = 2) => formatNumber(v, hostLocale.value, d)
 const shipper = ref('YOUR COMPANY')
 const consignee = ref('CUSTOMER NAME')
 const po = ref('PO-2026-001')
+const linesLocked = ref(false)
 const lines = ref<PackingLine[]>(packingFromCargo(cargo.value))
+const sampleError = ref('')
 
 watch(
   cargo,
   (rows) => {
+    if (linesLocked.value) return
     lines.value = packingFromCargo(rows)
   },
   { deep: true },
@@ -57,10 +65,33 @@ const labels = computed(() => ({
 }))
 
 const syncFromCargo = () => {
+  linesLocked.value = false
   lines.value = packingFromCargo(cargo.value)
 }
 
+const onImportApplied = (rows: MappedRow[]) => {
+  linesLocked.value = true
+  lines.value = packingFromMapped(rows)
+  if (rows[0]?.po) po.value = rows[0].po
+}
+
+const loadKrSample = async () => {
+  sampleError.value = ''
+  try {
+    const res = await fetch('/samples/kr-packing-list.csv')
+    const table = parseCsv(await res.text())
+    const mapping = detectColumnMapping(table[0] || [])
+    const mapped = applyMapping(table, mapping)
+    onImportApplied(mapped)
+    shipper.value = '한국수출(주)'
+    consignee.value = 'Buyer Co., Ltd.'
+  } catch (err) {
+    sampleError.value = err instanceof Error ? err.message : String(err)
+  }
+}
+
 const addLine = () => {
+  linesLocked.value = true
   const last = lines.value[lines.value.length - 1]
   const nextFrom = last ? Number(last.cartonTo) + 1 : 1
   lines.value.push({
@@ -78,6 +109,7 @@ const addLine = () => {
 }
 
 const removeLine = (index: number) => {
+  linesLocked.value = true
   lines.value.splice(index, 1)
 }
 </script>
@@ -90,14 +122,20 @@ const removeLine = (index: number) => {
         <label class="field">{{ t('shipper') }}<input v-model="shipper" /></label>
         <label class="field">{{ t('consignee') }}<input v-model="consignee" /></label>
         <label class="field">{{ t('poNumber') }}<input v-model="po" /></label>
-        <button class="btn-secondary full" @click="syncFromCargo">{{ t('syncFromCargo') }}</button>
-        <button class="btn-secondary full" @click="addLine">{{ t('add') }}</button>
+        <button class="btn-secondary full" type="button" @click="syncFromCargo">{{ t('syncFromCargo') }}</button>
+        <button class="btn-secondary full" type="button" @click="loadKrSample">{{ t('loadKrSample') }}</button>
+        <button class="btn-secondary full" type="button" @click="addLine">{{ t('add') }}</button>
+        <p v-if="linesLocked" class="field-hint">{{ t('linesLockedHint') }}</p>
+        <p v-if="sampleError" class="field-hint warn">{{ sampleError }}</p>
         <p v-if="issues.length" class="field-hint warn">{{ issues.map((c) => t(c)).join(' · ') }}</p>
+        <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e5ebf1">
+          <SheetImportPanel :t="t" :title="t('importPackingSheet')" @applied="onImportApplied" />
+        </div>
       </div>
       <div class="mini-panel">
         <span>☷</span>
         <div><strong>{{ totals.cartonCount }} {{ t('cartons') }} · {{ format(totals.cbm, 3) }} m³</strong><p>{{ t('sharedDesc') }}</p></div>
-        <button @click="emit('editCargo')">{{ t('edit') }} ↗</button>
+        <button type="button" @click="emit('editCargo')">{{ t('edit') }} ↗</button>
       </div>
     </div>
     <div class="tool-output">
@@ -143,16 +181,16 @@ const removeLine = (index: number) => {
                   <td><input v-model.number="line.widthCm" type="number" min="0" /></td>
                   <td><input v-model.number="line.heightCm" type="number" min="0" /></td>
                   <td>{{ format(lineCbm(line), 3) }} <small>×{{ cartonCountOf(line) }}</small></td>
-                  <td><button class="linkish" @click="removeLine(i)">×</button></td>
+                  <td><button class="linkish" type="button" @click="removeLine(i)">×</button></td>
                 </tr>
               </tbody>
             </table>
           </div>
         </div>
         <div class="action-row">
-          <button class="btn-secondary" @click="exportPackingCsv(lines, { shipper, consignee, po }, labels)">{{ t('export') }}</button>
-          <button class="btn-secondary" @click="exportPackingXlsx(lines, { shipper, consignee, po }, labels)">{{ t('exportXlsx') }}</button>
-          <button class="btn-primary" @click="exportPackingPdf(lines, { shipper, consignee, po, title: t('packingList') })">{{ t('exportPdf') }}</button>
+          <button class="btn-secondary" type="button" @click="exportPackingCsv(lines, { shipper, consignee, po }, labels)">{{ t('export') }}</button>
+          <button class="btn-secondary" type="button" @click="exportPackingXlsx(lines, { shipper, consignee, po }, labels)">{{ t('exportXlsx') }}</button>
+          <button class="btn-primary" type="button" @click="exportPackingPdf(lines, { shipper, consignee, po, title: t('packingList') })">{{ t('exportPdf') }}</button>
         </div>
       </div>
       <div class="hint-box">ⓘ {{ t('disclaimer') }}</div>

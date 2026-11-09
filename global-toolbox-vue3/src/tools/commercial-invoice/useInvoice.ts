@@ -1,6 +1,7 @@
-import { PDFDocument, StandardFonts } from 'pdf-lib'
 import { csv, download } from '../../shared/export/csv'
+import { createKoreanPdfWriter } from '../../shared/export/pdf'
 import { downloadXlsx } from '../../shared/export/xlsx'
+import type { MappedRow } from '../../shared/import/sheetMapping'
 import type { Cargo } from '../../shared/types/cargo'
 import { sanitizeNonNegative } from '../../shared/validation'
 
@@ -40,6 +41,21 @@ export function linesFromCargo(cargo: Cargo[]): InvoiceLine[] {
     unitPrice: n(c.price),
     unit: 'PCS',
   }))
+}
+
+export function linesFromMapped(rows: MappedRow[]): InvoiceLine[] {
+  return rows.map((row) => {
+    const qty = n(row.qty) || n(row.boxCount) || 1
+    let unitPrice = n(row.unitPrice)
+    if (!unitPrice && row.amount > 0 && qty > 0) unitPrice = row.amount / qty
+    return {
+      sku: row.sku || `SKU`,
+      description: row.description || row.sku || '',
+      qty,
+      unitPrice,
+      unit: row.unit || 'PCS',
+    }
+  })
 }
 
 export function lineAmount(line: InvoiceLine): number {
@@ -135,38 +151,23 @@ export async function exportInvoicePdf(
   title: string,
   disclaimer: string,
 ): Promise<void> {
-  const doc = await PDFDocument.create()
-  const page = doc.addPage([595, 842])
-  const font = await doc.embedFont(StandardFonts.Helvetica)
-  const bold = await doc.embedFont(StandardFonts.HelveticaBold)
-  let y = 800
-  const draw = (text: string, size = 10, useBold = false) => {
-    page.drawText(text.slice(0, 110), { x: 40, y, size, font: useBold ? bold : font })
-    y -= size + 6
-  }
-  draw(title, 16, true)
-  draw(`Invoice: ${meta.invoiceNo}  PO: ${meta.po}`)
-  draw(`Seller: ${meta.seller}`)
-  draw(`Buyer: ${meta.buyer}`)
-  draw(`Currency: ${meta.currency}  Incoterms: ${meta.incoterms}`)
-  draw(`Payment: ${meta.paymentTerms}`)
-  y -= 4
-  for (const line of lines.slice(0, 35)) {
-    draw(
+  const writer = await createKoreanPdfWriter()
+  writer.drawLine(title, 16, true)
+  writer.drawLine(`Invoice: ${meta.invoiceNo}  PO: ${meta.po}`)
+  writer.drawLine(`Seller: ${meta.seller}`)
+  writer.drawLine(`Buyer: ${meta.buyer}`)
+  writer.drawLine(`Currency: ${meta.currency}  Incoterms: ${meta.incoterms}`)
+  writer.drawLine(`Payment: ${meta.paymentTerms}`)
+  writer.drawLine('')
+  for (const line of lines) {
+    writer.drawLine(
       `${line.sku} | ${line.description} | ${line.qty} ${line.unit} @ ${n(line.unitPrice).toFixed(2)} = ${lineAmount(line).toFixed(2)}`,
     )
   }
   const totals = computeInvoiceTotals(lines)
-  draw(`TOTAL ${meta.currency} ${totals.computedTotal.toFixed(2)}`, 12, true)
-  y -= 8
-  draw(disclaimer, 8)
-  draw('Customs declarations are not auto-generated.', 8)
-  const bytes = await doc.save()
-  const blob = new Blob([bytes], { type: 'application/pdf' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = 'commercial-invoice.pdf'
-  a.click()
-  setTimeout(() => URL.revokeObjectURL(url), 1000)
+  writer.drawLine(`TOTAL ${meta.currency} ${totals.computedTotal.toFixed(2)}`, 12, true)
+  writer.drawLine('')
+  writer.drawLine(disclaimer, 8)
+  writer.drawLine('Customs declarations are not auto-generated.', 8)
+  await writer.finish('commercial-invoice.pdf')
 }

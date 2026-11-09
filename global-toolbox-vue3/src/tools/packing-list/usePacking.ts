@@ -1,6 +1,7 @@
-import { PDFDocument, StandardFonts } from 'pdf-lib'
 import { csv, download } from '../../shared/export/csv'
+import { createKoreanPdfWriter } from '../../shared/export/pdf'
 import { downloadXlsx } from '../../shared/export/xlsx'
+import type { MappedRow } from '../../shared/import/sheetMapping'
 import type { Cargo } from '../../shared/types/cargo'
 import { sanitizeNonNegative } from '../../shared/validation'
 
@@ -74,6 +75,31 @@ export function packingFromCargo(cargo: Cargo[]): PackingLine[] {
       lengthCm: n(c.length),
       widthCm: n(c.width),
       heightCm: n(c.height),
+    }
+  })
+}
+
+/** Build packing lines from mapped sheet rows (Korean/English Excel). */
+export function packingFromMapped(rows: MappedRow[]): PackingLine[] {
+  let fallbackCarton = 1
+  return rows.map((row, i) => {
+    const boxCount = Math.max(1, Math.floor(row.boxCount || row.qty || 1))
+    const cartonFrom = row.carton ? Math.max(1, Math.floor(Number(row.carton)) || fallbackCarton) : fallbackCarton
+    const cartonTo = cartonFrom + boxCount - 1
+    fallbackCarton = cartonTo + 1
+    const qtyPerCarton =
+      row.boxCount > 0 && row.qty > 0 ? Math.max(1, Math.round(row.qty / row.boxCount)) : Math.max(1, Math.floor(row.qty) || 1)
+    return {
+      id: `pl-map-${i}-${row.sku || i}`,
+      sku: row.sku || row.description || `SKU-${i + 1}`,
+      cartonFrom,
+      cartonTo,
+      qtyPerCarton: row.boxCount > 0 ? qtyPerCarton : Math.max(1, Math.floor(row.qty) || 1),
+      grossKg: row.grossKg || 1,
+      netKg: row.netKg || Math.max(0, (row.grossKg || 1) * 0.92),
+      lengthCm: row.lengthCm || 40,
+      widthCm: row.widthCm || 30,
+      heightCm: row.heightCm || 20,
     }
   })
 }
@@ -171,37 +197,22 @@ export async function exportPackingPdf(
   lines: PackingLine[],
   meta: { shipper: string; consignee: string; po: string; title: string },
 ): Promise<void> {
-  const doc = await PDFDocument.create()
-  const page = doc.addPage([595, 842])
-  const font = await doc.embedFont(StandardFonts.Helvetica)
-  const bold = await doc.embedFont(StandardFonts.HelveticaBold)
-  let y = 800
-  const draw = (text: string, size = 10, useBold = false) => {
-    page.drawText(text.slice(0, 100), { x: 40, y, size, font: useBold ? bold : font })
-    y -= size + 6
-  }
-  draw(meta.title, 16, true)
-  draw(`Shipper: ${meta.shipper}`)
-  draw(`Consignee: ${meta.consignee}`)
-  draw(`PO: ${meta.po}`)
-  y -= 6
-  for (const line of lines.slice(0, 40)) {
-    draw(
+  const writer = await createKoreanPdfWriter()
+  writer.drawLine(meta.title, 16, true)
+  writer.drawLine(`Shipper: ${meta.shipper}`)
+  writer.drawLine(`Consignee: ${meta.consignee}`)
+  writer.drawLine(`PO: ${meta.po}`)
+  writer.drawLine('')
+  for (const line of lines) {
+    writer.drawLine(
       `${line.sku} CTN ${line.cartonFrom}-${line.cartonTo} x${line.qtyPerCarton} GW ${n(line.grossKg).toFixed(2)}kg CBM ${lineCbm(line).toFixed(3)}`,
     )
   }
   const totals = computePackingTotals(lines)
-  draw(
+  writer.drawLine(
     `TOTAL cartons=${totals.cartonCount} qty=${totals.totalQty} GW=${totals.grossKg.toFixed(2)} NW=${totals.netKg.toFixed(2)} CBM=${totals.cbm.toFixed(3)}`,
     11,
     true,
   )
-  const bytes = await doc.save()
-  const blob = new Blob([bytes], { type: 'application/pdf' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = 'packing-list.pdf'
-  a.click()
-  setTimeout(() => URL.revokeObjectURL(url), 1000)
+  await writer.finish('packing-list.pdf')
 }
