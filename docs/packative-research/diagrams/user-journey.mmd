@@ -1,0 +1,16 @@
+flowchart TD
+  Home[MarketingOrHome] --> Products[ProductCatalog]
+  Products --> PDP[ProductDetail]
+  PDP --> Custom[CustomSize]
+  Custom --> Dieline[DielineDownload]
+  Custom --> Studio[RealtimeEasyDesign_mdPlus]
+  Studio --> EditorURL["/editor type id LWH hash"]
+  EditorURL --> CustomerCheck{"/api/customer"}
+  CustomerCheck -->|null| LoginWall[LoginModal]
+  CustomerCheck -->|object| Editor[DesignEditor]
+  Dieline --> CustomerCheck
+  Editor --> AI[AIGenerate]
+  Editor --> View3D[FoldPreview3D]
+  Editor --> Export[ExportOrCart]
+  Auth[SupabaseAuth] --> Account["/en/account"]
+  Account --> CustomerCheck

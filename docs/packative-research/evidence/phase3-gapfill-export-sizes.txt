@@ -1,0 +1,31 @@
+﻿# Gap-fill notes (2026-11-10 continuation)
+
+## Large-size EPS BoundingBox (pt) — plan sizes
+- crashlock 200x150x100: 2083x1065
+- crashlock 300x200x150: 2933x1419
+- mailerbox 200x150x100: 1835x1772
+- sleeve 200x150x100: 2081x341
+- pillow 200x150x100: 950x837
+- tray 200x150x100: 1917x1764
+
+## Studio SVG
+- productbox-crashlock 200_150_100: viewBox~2691.8x1333.06; Cutting=63 Creasing=14; 8 paths (topology stable)
+- 300_200_150 / 100_80_50 CDN SVG: 403 (not cached)
+
+## Overlay API
+- Missing dieline_url → 400 zod required
+- With dieline_url + Origin → 500 Internal server error (body incomplete / server-side)
+- Not fully verified without editor-originating payload
+
+## Export capability gate (high confidence)
+- packative.one/studio: per-storefront feature flags can turn OFF export / 600DPI / vectorize / upscale / 3D
+- KO packative.com editor chrome: 저장 + 카트에 담기 only; no Export button observed
+- Bundle still contains export/vectorize/upscale status UI + PostHog design_studio:export_modal_* and mockup_studio:export_*
+- Mockup Studio KO shows login wall even with store session on editor; EN /en/mockup-studio 404
+- editor.packative.com redirects/not-found via packative.com in this browser session
+
+## AI secondary (partial)
+- Upload panel: 이미지 업로드 / 내 업로드 / empty state verified (screenshot)
+- AI combobox shows at least: 이미지 생성, 메인 영역 디자인
+- FOLLOW-UP 2026-11-10: 메인 영역 E2E + re-generate via 생성 → see phase3-ai-main-area.txt / TC-AI-03 (Passed). Per-thumbnail 재생성 control Not Found.
+- Actual file upload: later Passed via TC-AI-02. local edit / upscale click-through: still Not Run this research track.

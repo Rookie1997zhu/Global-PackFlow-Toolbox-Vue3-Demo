@@ -1,0 +1,141 @@
+type=dict
+keys=['evidence_id', 'subject', 'provider', 'analysis_profile', 'predicate_type', 'operation', 'parameters', 'raw_result', 'normalized_result', 'confidence', 'authority', 'environment', 'limitations', 'relationship_coverage', 'locations', 'evidence_links']
+parameters.start_url = "dict(keys=['url', 'query'])"
+parameters.start_url.url = 'https://packative.com/en/studio'
+parameters.actions[1].destination.url = 'https://packative.com/'
+parameters.capture.network = "dict(keys=['request_body', 'response_body', 'header_values'])"
+parameters.capture.limits.max_network_transactions = 800
+parameters.capture.limits.max_network_body_bytes = 32768
+parameters.capture.limits.max_network_body_allocation_bytes = 1048576
+parameters.capture.limits.max_network_header_allocation_bytes = 1048576
+parameters.capture.limits.max_network_metadata_allocation_bytes = 1048576
+normalized_result.scenario.network_content = "dict(keys=['request_body', 'response_body', 'header_values'])"
+normalized_result.scenario.limits.max_network_transactions = 800
+normalized_result.scenario.limits.max_network_body_bytes = 32768
+normalized_result.scenario.limits.max_network_body_allocation_bytes = 1048576
+normalized_result.scenario.limits.max_network_header_allocation_bytes = 1048576
+normalized_result.scenario.limits.max_network_metadata_allocation_bytes = 1048576
+normalized_result.steps[0].before_url = "dict(keys=['url', 'origin', 'query_parameter_names', 'redacted'])"
+normalized_result.steps[0].before_url.url = 'about:blank'
+normalized_result.steps[0].after_url = "dict(keys=['url', 'origin', 'query_parameter_names', 'redacted'])"
+normalized_result.steps[0].after_url.url = 'https://packative.com/en/studio'
+normalized_result.steps[0].artifacts = "dict(keys=['screenshot', 'dom', 'accessibility', 'url', 'history', 'storage'])"
+normalized_result.steps[0].artifacts.screenshot = "dict(keys=['state', 'value'])"
+normalized_result.steps[0].artifacts.url = "dict(keys=['state', 'value'])"
+normalized_result.steps[0].artifacts.url.value.url = 'https://packative.com/en/studio'
+normalized_result.steps[1].before_url = "dict(keys=['url', 'origin', 'query_parameter_names', 'redacted'])"
+normalized_result.steps[1].before_url.url = 'https://packative.com/en/studio'
+normalized_result.steps[1].after_url = "dict(keys=['url', 'origin', 'query_parameter_names', 'redacted'])"
+normalized_result.steps[1].after_url.url = 'https://packative.com/en/studio'
+normalized_result.steps[1].artifacts = "dict(keys=['screenshot', 'dom', 'accessibility', 'url', 'history', 'storage'])"
+normalized_result.steps[1].artifacts.screenshot = "dict(keys=['state', 'value'])"
+normalized_result.steps[1].artifacts.url = "dict(keys=['state', 'value'])"
+normalized_result.steps[1].artifacts.url.value.url = 'https://packative.com/en/studio'
+normalized_result.steps[2].before_url = "dict(keys=['url', 'origin', 'query_parameter_names', 'redacted'])"
+normalized_result.steps[2].before_url.url = 'https://packative.com/en/studio'
+normalized_result.steps[2].after_url = "dict(keys=['url', 'origin', 'query_parameter_names', 'redacted'])"
+normalized_result.steps[2].after_url.url = 'https://packative.com/'
+normalized_result.steps[2].artifacts = "dict(keys=['screenshot', 'dom', 'accessibility', 'url', 'history', 'storage'])"
+normalized_result.steps[2].artifacts.screenshot = "dict(keys=['state', 'value'])"
+normalized_result.steps[2].artifacts.url = "dict(keys=['state', 'value'])"
+normalized_result.steps[2].artifacts.url.value.url = 'https://packative.com/'
+normalized_result.steps[3].before_url = "dict(keys=['url', 'origin', 'query_parameter_names', 'redacted'])"
+normalized_result.steps[3].before_url.url = 'https://packative.com/'
+normalized_result.steps[3].after_url = "dict(keys=['url', 'origin', 'query_parameter_names', 'redacted'])"
+normalized_result.steps[3].after_url.url = 'https://packative.com/'
+normalized_result.steps[3].artifacts = "dict(keys=['screenshot', 'dom', 'accessibility', 'url', 'history', 'storage'])"
+normalized_result.steps[3].artifacts.screenshot = "dict(keys=['state', 'value'])"
+normalized_result.steps[3].artifacts.url = "dict(keys=['state', 'value'])"
+normalized_result.steps[3].artifacts.url.value.url = 'https://packative.com/'
+normalized_result.events.items[0].url = "dict(keys=['url', 'origin', 'query_parameter_names', 'redacted'])"
+normalized_result.events.items[0].url.url = 'https://packative.com/en/studio'
+normalized_result.events.items[1].url = "dict(keys=['url', 'origin', 'query_parameter_names', 'redacted'])"
+normalized_result.events.items[1].url.url = 'https://packative.com/en/studio'
+normalized_result.events.items[2].url = "dict(keys=['url', 'origin', 'query_parameter_names', 'redacted'])"
+normalized_result.events.items[2].url.url = 'https://assets.packative.com/icons/logo.svg'
+normalized_result.events.items[3].url = "dict(keys=['url', 'origin', 'query_parameter_names', 'redacted'])"
+normalized_result.events.items[3].url.url = 'https://packative.com/_next/image?url=https%3A%2F%2Fassets.packative.com%2Fimages%2Fdyp%2Fhero-background.png&w=1920&q=75'
+normalized_result.events.items[4].url = "dict(keys=['url', 'origin', 'query_parameter_names', 'redacted'])"
+normalized_result.events.items[4].url.url = 'https://packative.com/_next/image?url=https%3A%2F%2Fassets.packative.com%2Fimages%2Fdyp%2Fhero-card-1.png&w=1920&q=75'
+normalized_result.events.items[5].url = "dict(keys=['url', 'origin', 'query_parameter_names', 'redacted'])"
+normalized_result.events.items[5].url.url = 'https://packative.com/_next/image?url=https%3A%2F%2Fassets.packative.com%2Fimages%2Fdyp%2Fhero-card-2.png&w=1920&q=75'
+normalized_result.events.items[6].url = "dict(keys=['url', 'origin', 'query_parameter_names', 'redacted'])"
+normalized_result.events.items[6].url.url = 'https://packative.com/_next/image?url=https%3A%2F%2Fassets.packative.com%2Fimages%2Fdyp%2Fhero-card-3.png&w=1920&q=75'
+normalized_result.events.items[7].url = "dict(keys=['url', 'origin', 'query_parameter_names', 'redacted'])"
+normalized_result.events.items[7].url.url = 'https://packative.com/_next/image?url=https%3A%2F%2Fassets.packative.com%2Fimages%2Fdyp%2Fhero-card-4.png&w=1920&q=75'
+normalized_result.events.items[8].url = "dict(keys=['url', 'origin', 'query_parameter_names', 'redacted'])"
+normalized_result.events.items[8].url.url = 'https://assets.packative.com/images/packative-logo.svg'
+normalized_result.events.items[9].url = "dict(keys=['url', 'origin', 'query_parameter_names', 'redacted'])"
+normalized_result.events.items[9].url.url = 'https://packative-global-production.dominik-99e.workers.dev/_next/static/chunks/043miol97sbyh.css'
+normalized_result.events.items[10].url = "dict(keys=['url', 'origin', 'query_parameter_names', 'redacted'])"
+normalized_result.events.items[10].url.url = 'https://packative-global-production.dominik-99e.workers.dev/_next/static/chunks/15m0.ab4udg~0.js'
+normalized_result.events.items[11].url = "dict(keys=['url', 'origin', 'query_parameter_names', 'redacted'])"
+normalized_result.events.items[11].url.url = 'https://packative-global-production.dominik-99e.workers.dev/_next/static/chunks/14p8.bazr1_r1.js'
+normalized_result.events.items[12].url = "dict(keys=['url', 'origin', 'query_parameter_names', 'redacted'])"
+normalized_result.events.items[12].url.url = 'https://packative-global-production.dominik-99e.workers.dev/_next/static/chunks/14--o03lk4egg.js'
+normalized_result.events.items[13].url = "dict(keys=['url', 'origin', 'query_parameter_names', 'redacted'])"
+normalized_result.events.items[13].url.url = 'https://packative-global-production.dominik-99e.workers.dev/_next/static/chunks/0x0wtohv8nyck.js'
+normalized_result.events.items[14].url = "dict(keys=['url', 'origin', 'query_parameter_names', 'redacted'])"
+normalized_result.events.items[14].url.url = 'https://packative-global-production.dominik-99e.workers.dev/_next/static/chunks/0jim5skn.6qtf.js'
+normalized_result.events.items[15].url = "dict(keys=['url', 'origin', 'query_parameter_names', 'redacted'])"
+normalized_result.events.items[15].url.url = 'https://packative-global-production.dominik-99e.workers.dev/_next/static/chunks/turbopack-17y45w2su1fm~.js'
+normalized_result.events.items[16].url = "dict(keys=['url', 'origin', 'query_parameter_names', 'redacted'])"
+normalized_result.events.items[16].url.url = 'https://packative-global-production.dominik-99e.workers.dev/_next/static/chunks/09lzv9kpn5zza.js'
+normalized_result.events.items[17].url = "dict(keys=['url', 'origin', 'query_parameter_names', 'redacted'])"
+normalized_result.events.items[17].url.url = 'https://packative-global-production.dominik-99e.workers.dev/_next/static/chunks/162oenscnm55r.js'
+normalized_result.events.items[18].url = "dict(keys=['url', 'origin', 'query_parameter_names', 'redacted'])"
+normalized_result.events.items[18].url.url = 'https://packative-global-production.dominik-99e.workers.dev/_next/static/chunks/0qjl2hk5u7tp7.js'
+normalized_result.events.items[19].url = "dict(keys=['url', 'origin', 'query_parameter_names', 'redacted'])"
+normalized_result.events.items[19].url.url = 'https://packative-global-production.dominik-99e.workers.dev/_next/static/chunks/0z9i9vn8lkzeg.js'
+normalized_result.events.omissions.network_transactions = 'list(len=0)'
+normalized_result.events.omissions.network_transaction_range = None
+normalized_result.limitations = ['Event sequence records provider receipt order; simultaneous browser causality is not inferred.', 'Network content is retained only when selected; Playwright response-body bytes are API results and are not guaranteed to match wire bytes.', 'Request bytes are limited to what Playwright exposes; not_exposed does not establish body absence or multipart file coverage.', 'Network content reads settle within 5 seconds each and the observer does not request bodies from 
+limitations = ['Artifact identity is unavailable for this observation.', 'Event sequence records provider receipt order; simultaneous browser causality is not inferred.', 'Network content is retained only when selected; Playwright response-body bytes are API results and are not guaranteed to match wire bytes.', 'Request bytes are limited to what Playwright exposes; not_exposed does not establish body absence or multipart file coverage.', 'Network content reads settle within 5 seconds each and th
+relationship_coverage = None
+url_count=82
+URL https://blog.naver.com/packative
+URL https://career.packative.com
+URL https://career.packative.com/4c8154af
+URL https://cdn-cm
+URL https://cdn-cookieye
+URL https://cdn.packative.com/
+URL https://cdn.packative.com/brand-a
+URL https://help.packative.com/
+URL https://packative-global-production.dominik-99e.worker
+URL https://packative.com
+URL https://packative.com/
+URL https://packative.com/)
+URL https://packative.com/) 
+URL https://packative.com/_next/
+URL https://packative.com/_next/image?url=http
+URL https://packative.com/blog/%eb%b0%95%ec%8a%a4-%ec%a0%9c%ec%9e%91%ec%97%90-%ed%95%84%ec%9a%94%ed%95%9c-%eb%aa%a8%eb%93%a0-%ea%b2%83/) 
+URL https://packative.com/blog/%ec%84%b1%ea%b3%b5%ec%a0%81%ec%9d%b8-%ed%8c%a8%ed%82%a4%ec%a7%80%eb%a5%bc-%ec%9c%84%ed%95%9c-%ec%8a%ac%eb%a1%9c%ea%b1%b4-%eb%a7%8c%eb%93%a4%ea%b8%b0%ec%9d%98-%eb%aa%a8%eb%93%a0-%ea%b2%83/) 
+URL https://packative.com/blog/%ec%86%8c%eb%b9%84%ec%9e%90%eb%a5%bc-%ec%82%ac%eb%a1%9c%ec%9e%a1%eb%8a%94-%ec%9d%b8%ec%8a%a4%ed%83%80%ea%b7%b8%eb%9e%98%eb%a8%b8%eb%b8%94-%eb%a7%88%ec%bc%80%ed%8c%85%eb%b6%80/)
+URL https://packative.com/blog/%ec%86%8c%eb%b9%84%ec%9e%90%eb%a5%bc-%ec%82%ac%eb%a1%9c%ec%9e%a1%eb%8a%94-%ec%9d%b8%ec%8a%a4%ed%83%80%ea%b7%b8%eb%9e%98%eb%a8%b8%eb%b8%94-%eb%a7%88%ec%bc%80%ed%8c%85%eb%b6%80/), 
+URL https://packative.com/blog/%ec%96%91%ec%b4%88-%eb%b0%95%ec%8a%a4-%ec%a0%9c%ec%9e%91-%ec%a0%84-%eb%94%94%ec%9e%90%ec%9d%b8-%ec%98%81%ea%b0%90%ec%9d%84-%ec%96%bb%ec%96%b4%eb%b3%b4%ec%84%b8%ec%9a%94/)
+URL https://packative.com/blog/%ec%96%b8%eb%b0%95%ec%8b%b1unboxing-%ec%9d%b4-%ec%8b%9c%eb%8c%80-%eb%9c%bb%eb%b0%96%ec%97%90-%ec%83%88%eb%a1%9c%ec%9a%b4-%eb%a7%88%ec%bc%80%ed%8c%85-%ed%8a%b8%eb%a0%8c%eb%93%9c/)
+URL https://packative.com/blog/%ec%9d%b4%ec%bb%a4%eb%a8%b8%ec%8a%a4-%ed%8a%b8%eb%a0%8c%eb%93%9c%ec%9d%98-%eb%b3%80%ed%99%94%ec%99%80-%eb%af%b8%eb%9e%98-%ec%a0%84%eb%9e%b5/)
+URL https://packative.com/blog/%ec%a0%9c%ed%92%88%ed%8c%90%eb%a7%a4-%ec%b4%89%ec%a7%84%ec%9d%84-%ec%9c%84%ed%95%9c-%ec%a0%84%eb%9e%b5-%ed%8c%a8%ed%82%a4%ec%a7%80%eb%a5%bc-%ed%86%b5%ed%95%9c-%ed%99%8d%eb%b3%b4packverti
+URL https://packative.com/blog/package_a_to_z/)
+URL https://packative.com/builder-a
+URL https://packative.com/cdn-cgi/
+URL https://packative.com/cu
+URL https://packative.com/en
+URL https://packative.com/en/
+URL https://packative.com/en/contact?_r
+URL https://packative.com/en/login?_r
+URL https://packative.com/en/portfolio?_r
+URL https://packative.com/en/product
+URL https://packative.com/en?_r
+URL https://packative.com/event-holiday-promo
+URL https://packative.com/favicon.ico?favicon.13
+URL https://packative.com/image
+URL https://packative.com/indu
+URL https://packative.com/page/de
+URL https://packative.com/page/portfolio)
+URL https://packative.com/product
+URL https://packative.one/)
+URL https://packative.one/ko
+URL https://www.facebook.com/packative/
+URL https://www.linkedin.com/company/packative
+script_paths=['/_next/image?url=http']

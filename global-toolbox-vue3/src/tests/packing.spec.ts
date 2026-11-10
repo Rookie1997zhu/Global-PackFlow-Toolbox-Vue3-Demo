@@ -12,8 +12,28 @@ import {
 describe('packing list', () => {
   it('builds carton ranges from cargo and totals consistently', () => {
     const lines = packingFromCargo([
-      { sku: 'A', length: 40, width: 30, height: 20, weight: 5, qty: 2, price: 1 },
-      { sku: 'B', length: 50, width: 40, height: 30, weight: 8, qty: 1, price: 2 },
+      {
+        sku: 'A',
+        length: 40,
+        width: 30,
+        height: 20,
+        weight: 5,
+        qty: 2,
+        price: 1,
+        quantityBasis: 'carton',
+        netKg: 4.5,
+      },
+      {
+        sku: 'B',
+        length: 50,
+        width: 40,
+        height: 30,
+        weight: 8,
+        qty: 1,
+        price: 2,
+        quantityBasis: 'carton',
+        netKg: 7,
+      },
     ])
     expect(lines[0].cartonFrom).toBe(1)
     expect(lines[0].cartonTo).toBe(2)

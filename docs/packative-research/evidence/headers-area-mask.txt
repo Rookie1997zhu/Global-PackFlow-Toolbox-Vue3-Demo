@@ -1,0 +1,24 @@
+HTTP/1.1 200 OK
+Date: Tue, 10 Nov 2026 07:13:17 GMT
+Content-Type: image/png
+Content-Length: 13809
+Connection: keep-alive
+CF-Ray: a58340f58f373bb3-NRT
+CF-Cache-Status: MISS
+Accept-Ranges: bytes
+Access-Control-Allow-Origin: *
+Age: 1045
+Cache-Control: max-age=14400
+ETag: "e40d90d80366ff79415cfff83ed03b15"
+Last-Modified: Wed, 22 Apr 2026 13:47:28 GMT
+Server: cloudflare
+Via: 1.1 484fe398698a774124395f7049a70ce8.cloudfront.net (CloudFront)
+Nel: {"report_to":"cf-nel","success_fraction":0.0,"max_age":604800}
+Report-To: {"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=K6kTSBB2sAhdw4aGWd8llCB1h8RoaIzqzPviDbTsXc39msM3XDArQ9iaVtTCQp%2Fp%2FlNdiKgGsmlgHAZEb%2BIx%2B5F8HzKPXG%2BeM4kNFu4hZYqQn49YO6JwGNq44SbqGr9XePLRi0ZSF75N6g%3D%3D"}]}
+access-control-allow-methods: GET, HEAD
+access-control-max-age: 86400
+x-amz-cf-id: vz-vDtYOfVM6lbZo_A84nBFH8AIDoAnakEd4xaMxZZcWoKq6H8dhlg==
+x-amz-cf-pop: NRT12-P8
+x-amz-server-side-encryption: AES256
+x-cache: Hit from cloudfront
+

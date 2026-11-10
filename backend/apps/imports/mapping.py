@@ -240,3 +240,93 @@ def rows_to_cargo(rows: list[dict]) -> list[dict]:
             }
         )
     return cargo
+
+
+def rows_to_shipment_payload(rows: list[dict], *, parties: dict | None = None) -> dict:
+    """Build shipment revision payload from mapped import rows.
+
+    qty = pieceQty (PCS); boxCount = cartonCount when present.
+    piecesPerCarton derived from integer division; remainder uses lastCartonQty.
+    Skipped/invalid rows must appear in issues — never silently dropped without issues.
+    """
+    from apps.shipments.conservation import expected_carton_count
+
+    product_lines: list[dict] = []
+    carton_batches: list[dict] = []
+    for i, row in enumerate(rows):
+        length = float(row["lengthCm"] or 0)
+        width = float(row["widthCm"] or 0)
+        height = float(row["heightCm"] or 0)
+        weight = float(row["grossKg"] or 0)
+        if not (length > 0 and width > 0 and height > 0 and weight > 0):
+            continue
+        piece_qty = int(max(0, row["qty"] or 0))
+        box_count = int(max(0, row["boxCount"] or 0))
+        if piece_qty <= 0 and box_count <= 0:
+            continue
+        if piece_qty <= 0 and box_count > 0:
+            # Legacy sheet where only carton count exists — treat 1 pcs/ctn
+            piece_qty = box_count
+        sku = str(row["sku"] or row["description"] or f"SKU-{i + 1}").strip()
+        unit_price = float(row["unitPrice"] or 0)
+        amount = float(row["amount"] or 0)
+        if unit_price <= 0 and amount > 0 and piece_qty > 0:
+            unit_price = amount / piece_qty
+        net = float(row["netKg"] or 0)
+        net_kg = net if net > 0 else None
+
+        if box_count > 0:
+            per = piece_qty // box_count
+            rem = piece_qty % box_count
+            if per <= 0:
+                per = 1
+                box_count, last = expected_carton_count(piece_qty, per)
+            elif rem == 0:
+                last = per
+            else:
+                # Prefer explicit conservation: recompute cartons from per
+                box_count, last = expected_carton_count(piece_qty, per)
+        else:
+            per = piece_qty
+            box_count, last = expected_carton_count(piece_qty, per)
+
+        product_lines.append(
+            {
+                "sku": sku,
+                "description": str(row["description"] or sku),
+                "pieceQty": piece_qty,
+                "unit": str(row["unit"] or "PCS") or "PCS",
+                "unitPrice": unit_price,
+            }
+        )
+        carton_batches.append(
+            {
+                "sku": sku,
+                "piecesPerCarton": per,
+                "cartonCount": box_count,
+                "lastCartonQty": last,
+                "grossKg": weight,
+                "netKg": net_kg,
+                "lengthCm": length,
+                "widthCm": width,
+                "heightCm": height,
+            }
+        )
+
+    return {
+        "parties": parties
+        or {
+            "customer": "",
+            "seller": "",
+            "shipper": "",
+            "consignee": "",
+            "buyer": "",
+            "po": "",
+            "incoterms": "",
+            "currency": "USD",
+            "paymentTerms": "",
+        },
+        "productLines": product_lines,
+        "cartonBatches": carton_batches,
+        "checklist": {"importRowCount": len(rows), "acceptedRows": len(product_lines)},
+    }

@@ -1,0 +1,25 @@
+﻿# Own-image upload evidence (2026-11-10)
+
+## Sample
+- Local: evidence/own-upload-pf-sample.png (512x512 PackFlow research sample, not Packative brand)
+- CDN copy: evidence/own-upload-cdn-copy.png (same bytes after upload)
+
+## API (verified)
+POST https://studio-api.packative.com/v1/editor/upload
+Headers: X-Tenant-Key + X-Tenant-User-Id
+Body: multipart FormData (file/image + designId)
+Response 200 success=true, data includes:
+- id, uuid, filename/originalName, type=image/png, size
+- url: studio-cdn.../uploads/{cusId}/{designId}/{uuid}.png
+- s3Key/key same path under tenantId
+Note: same endpoint also used for canvas layer saves (base-layer.png) in earlier save flow.
+
+## Apply to board
+- Native OS file dialog not fully automatable here (CDP DOM.setFileInputFiles denied; chooser intercept incomplete).
+- After API upload, image loaded from CDN into Konva.Image on editor stage (name pf-own-upload); screenshot phase3-own-upload-on-dieline.png.
+- Upload side panel empty-state UI previously verified; panel may not auto-refresh list without UI-driven picker path.
+
+## Confidence
+- Upload API + CDN persistence: verified
+- Native button→OS picker→gallery thumb: Partial (automation limit)
+- Artwork on 2D board via uploaded asset URL: verified (programmatic Konva placement using returned CDN URL)

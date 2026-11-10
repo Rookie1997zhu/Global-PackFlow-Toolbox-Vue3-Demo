@@ -1,0 +1,31 @@
+{
+  "id": "container-mixed-constraints",
+  "description": "A not stackable / not rotatable; B stackable and rotatable",
+  "containerPreset": "40HQ",
+  "skus": [
+    {
+      "id": "A",
+      "name": "SKU-A",
+      "length": 1000,
+      "width": 500,
+      "height": 400,
+      "weight": 10,
+      "qty": 1,
+      "allowRotate": false,
+      "stackable": false,
+      "color": "#0e7490"
+    },
+    {
+      "id": "B",
+      "name": "SKU-B",
+      "length": 1000,
+      "width": 500,
+      "height": 400,
+      "weight": 10,
+      "qty": 1,
+      "allowRotate": true,
+      "stackable": true,
+      "color": "#b45309"
+    }
+  ]
+}

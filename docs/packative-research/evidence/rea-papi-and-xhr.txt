@@ -1,0 +1,410 @@
+[
+  {
+    "method": "GET",
+    "status": null,
+    "kind": "request",
+    "resource_type": "fetch",
+    "url": "https://cdn-cookieyes.com/client_data/849bac6d7e812113e89d955ee00d8341/Ac_zclrc.json",
+    "step_index": 0
+  },
+  {
+    "method": "GET",
+    "status": 200,
+    "kind": "response",
+    "resource_type": "fetch",
+    "url": "https://cdn-cookieyes.com/client_data/849bac6d7e812113e89d955ee00d8341/Ac_zclrc.json",
+    "step_index": 0
+  },
+  {
+    "method": "GET",
+    "status": null,
+    "kind": "request-finished",
+    "resource_type": "fetch",
+    "url": "https://cdn-cookieyes.com/client_data/849bac6d7e812113e89d955ee00d8341/Ac_zclrc.json",
+    "step_index": 0
+  },
+  {
+    "method": "GET",
+    "status": null,
+    "kind": "request",
+    "resource_type": "fetch",
+    "url": "https://cdn-cookieyes.com/client_data/849bac6d7e812113e89d955ee00d8341/config/ThZKmi6v.json",
+    "step_index": 0
+  },
+  {
+    "method": "GET",
+    "status": 200,
+    "kind": "response",
+    "resource_type": "fetch",
+    "url": "https://cdn-cookieyes.com/client_data/849bac6d7e812113e89d955ee00d8341/config/ThZKmi6v.json",
+    "step_index": 0
+  },
+  {
+    "method": "GET",
+    "status": null,
+    "kind": "request-finished",
+    "resource_type": "fetch",
+    "url": "https://cdn-cookieyes.com/client_data/849bac6d7e812113e89d955ee00d8341/config/ThZKmi6v.json",
+    "step_index": 0
+  },
+  {
+    "method": "GET",
+    "status": null,
+    "kind": "request",
+    "resource_type": "fetch",
+    "url": "https://cdn-cookieyes.com/client_data/849bac6d7e812113e89d955ee00d8341/translations/mr_Whc0G.json",
+    "step_index": 0
+  },
+  {
+    "method": "GET",
+    "status": 200,
+    "kind": "response",
+    "resource_type": "fetch",
+    "url": "https://cdn-cookieyes.com/client_data/849bac6d7e812113e89d955ee00d8341/translations/mr_Whc0G.json",
+    "step_index": 0
+  },
+  {
+    "method": "GET",
+    "status": null,
+    "kind": "request-finished",
+    "resource_type": "fetch",
+    "url": "https://cdn-cookieyes.com/client_data/849bac6d7e812113e89d955ee00d8341/translations/mr_Whc0G.json",
+    "step_index": 0
+  },
+  {
+    "method": "GET",
+    "status": null,
+    "kind": "request",
+    "resource_type": "fetch",
+    "url": "https://cdn-cookieyes.com/client_data/849bac6d7e812113e89d955ee00d8341/audit-table/64sPjX8N.json",
+    "step_index": 0
+  },
+  {
+    "method": "GET",
+    "status": 200,
+    "kind": "response",
+    "resource_type": "fetch",
+    "url": "https://cdn-cookieyes.com/client_data/849bac6d7e812113e89d955ee00d8341/audit-table/64sPjX8N.json",
+    "step_index": 0
+  },
+  {
+    "method": "GET",
+    "status": null,
+    "kind": "request-finished",
+    "resource_type": "fetch",
+    "url": "https://cdn-cookieyes.com/client_data/849bac6d7e812113e89d955ee00d8341/audit-table/64sPjX8N.json",
+    "step_index": 0
+  },
+  {
+    "method": "POST",
+    "status": null,
+    "kind": "request",
+    "resource_type": "fetch",
+    "url": "https://papi.packative.com/public/online/price",
+    "step_index": 0
+  },
+  {
+    "method": "GET",
+    "status": null,
+    "kind": "request",
+    "resource_type": "fetch",
+    "url": "https://packative.com/en/contact?_rsc=KNMWpm5LHabtSFKo",
+    "step_index": 0
+  },
+  {
+    "method": "GET",
+    "status": null,
+    "kind": "request",
+    "resource_type": "fetch",
+    "url": "https://packative.com/en/portfolio?_rsc=KNMWpm5LHabtSFKo",
+    "step_index": 0
+  },
+  {
+    "method": "GET",
+    "status": null,
+    "kind": "request",
+    "resource_type": "fetch",
+    "url": "https://packative.com/en/products?_rsc=KNMWpm5LHabtSFKo",
+    "step_index": 0
+  },
+  {
+    "method": "GET",
+    "status": null,
+    "kind": "request",
+    "resource_type": "fetch",
+    "url": "https://packative.com/?_rsc=KNMWpm5LHabtSFKo",
+    "step_index": 0
+  },
+  {
+    "method": "GET",
+    "status": 200,
+    "kind": "response",
+    "resource_type": "fetch",
+    "url": "https://packative.com/en/products?_rsc=KNMWpm5LHabtSFKo",
+    "step_index": 0
+  },
+  {
+    "method": "GET",
+    "status": null,
+    "kind": "request",
+    "resource_type": "fetch",
+    "url": "https://packative.com/en/login?_rsc=KNMWpm5LHabtSFKo",
+    "step_index": 0
+  },
+  {
+    "method": "GET",
+    "status": null,
+    "kind": "request-finished",
+    "resource_type": "fetch",
+    "url": "https://packative.com/en/products?_rsc=KNMWpm5LHabtSFKo",
+    "step_index": 0
+  },
+  {
+    "method": "GET",
+    "status": 200,
+    "kind": "response",
+    "resource_type": "fetch",
+    "url": "https://packative.com/en/contact?_rsc=KNMWpm5LHabtSFKo",
+    "step_index": 0
+  },
+  {
+    "method": "GET",
+    "status": null,
+    "kind": "request-failed",
+    "resource_type": "fetch",
+    "url": "https://packative.com/en/contact?_rsc=KNMWpm5LHabtSFKo",
+    "step_index": 0
+  },
+  {
+    "method": "GET",
+    "status": null,
+    "kind": "request",
+    "resource_type": "fetch",
+    "url": "https://packative.com/en?_rsc=KNMWpm5LHabtSFKo",
+    "step_index": 0
+  },
+  {
+    "method": "GET",
+    "status": 200,
+    "kind": "response",
+    "resource_type": "fetch",
+    "url": "https://packative.com/en/portfolio?_rsc=KNMWpm5LHabtSFKo",
+    "step_index": 0
+  },
+  {
+    "method": "GET",
+    "status": 200,
+    "kind": "response",
+    "resource_type": "fetch",
+    "url": "https://packative.com/en/login?_rsc=KNMWpm5LHabtSFKo",
+    "step_index": 0
+  },
+  {
+    "method": "GET",
+    "status": 200,
+    "kind": "response",
+    "resource_type": "fetch",
+    "url": "https://packative.com/?_rsc=KNMWpm5LHabtSFKo",
+    "step_index": 0
+  },
+  {
+    "method": "GET",
+    "status": null,
+    "kind": "request",
+    "resource_type": "fetch",
+    "url": "https://packative.com/en/contact?_rsc=g78F6uH23c0ZkVRC",
+    "step_index": 0
+  },
+  {
+    "method": "GET",
+    "status": null,
+    "kind": "request",
+    "resource_type": "fetch",
+    "url": "https://packative.com/en/portfolio?_rsc=g78F6uH23c0ZkVRC",
+    "step_index": 0
+  },
+  {
+    "method": "GET",
+    "status": null,
+    "kind": "request-finished",
+    "resource_type": "fetch",
+    "url": "https://packative.com/?_rsc=KNMWpm5LHabtSFKo",
+    "step_index": 0
+  },
+  {
+    "method": "GET",
+    "status": null,
+    "kind": "request",
+    "resource_type": "fetch",
+    "url": "https://packative.com/en/products?_rsc=g78F6uH23c0ZkVRC",
+    "step_index": 0
+  },
+  {
+    "method": "GET",
+    "status": null,
+    "kind": "request-finished",
+    "resource_type": "fetch",
+    "url": "https://packative.com/en/portfolio?_rsc=KNMWpm5LHabtSFKo",
+    "step_index": 0
+  },
+  {
+    "method": "GET",
+    "status": null,
+    "kind": "request-finished",
+    "resource_type": "fetch",
+    "url": "https://packative.com/en/login?_rsc=KNMWpm5LHabtSFKo",
+    "step_index": 0
+  },
+  {
+    "method": "POST",
+    "status": null,
+    "kind": "request",
+    "resource_type": "fetch",
+    "url": "https://us.i.posthog.com/flags/?v=2&ip=0&_=1794289434528&ver=1.364.1&compression=base64",
+    "step_index": 1
+  },
+  {
+    "method": "GET",
+    "status": 200,
+    "kind": "response",
+    "resource_type": "fetch",
+    "url": "https://packative.com/en?_rsc=KNMWpm5LHabtSFKo",
+    "step_index": 1
+  },
+  {
+    "method": "GET",
+    "status": null,
+    "kind": "request",
+    "resource_type": "fetch",
+    "url": "https://packative.com/en/login?_rsc=g78F6uH23c0ZkVRC",
+    "step_index": 1
+  },
+  {
+    "method": "GET",
+    "status": null,
+    "kind": "request-finished",
+    "resource_type": "fetch",
+    "url": "https://packative.com/en?_rsc=KNMWpm5LHabtSFKo",
+    "step_index": 1
+  },
+  {
+    "method": "GET",
+    "status": 200,
+    "kind": "response",
+    "resource_type": "fetch",
+    "url": "https://packative.com/en/contact?_rsc=g78F6uH23c0ZkVRC",
+    "step_index": 1
+  },
+  {
+    "method": "GET",
+    "status": 200,
+    "kind": "response",
+    "resource_type": "fetch",
+    "url": "https://packative.com/en/portfolio?_rsc=g78F6uH23c0ZkVRC",
+    "step_index": 1
+  },
+  {
+    "method": "GET",
+    "status": null,
+    "kind": "request-failed",
+    "resource_type": "fetch",
+    "url": "https://packative.com/en/contact?_rsc=g78F6uH23c0ZkVRC",
+    "step_index": 1
+  },
+  {
+    "method": "GET",
+    "status": null,
+    "kind": "request",
+    "resource_type": "fetch",
+    "url": "https://packative.com/en?_rsc=g78F6uH23c0ZkVRC",
+    "step_index": 1
+  },
+  {
+    "method": "GET",
+    "status": null,
+    "kind": "request-finished",
+    "resource_type": "fetch",
+    "url": "https://packative.com/en/portfolio?_rsc=g78F6uH23c0ZkVRC",
+    "step_index": 1
+  },
+  {
+    "method": "GET",
+    "status": 200,
+    "kind": "response",
+    "resource_type": "fetch",
+    "url": "https://packative.com/en/login?_rsc=g78F6uH23c0ZkVRC",
+    "step_index": 1
+  },
+  {
+    "method": "GET",
+    "status": 200,
+    "kind": "response",
+    "resource_type": "fetch",
+    "url": "https://packative.com/en?_rsc=g78F6uH23c0ZkVRC",
+    "step_index": 1
+  },
+  {
+    "method": "GET",
+    "status": null,
+    "kind": "request-finished",
+    "resource_type": "fetch",
+    "url": "https://packative.com/en/login?_rsc=g78F6uH23c0ZkVRC",
+    "step_index": 1
+  },
+  {
+    "method": "GET",
+    "status": null,
+    "kind": "request-finished",
+    "resource_type": "fetch",
+    "url": "https://packative.com/en?_rsc=g78F6uH23c0ZkVRC",
+    "step_index": 1
+  },
+  {
+    "method": "POST",
+    "status": 200,
+    "kind": "response",
+    "resource_type": "fetch",
+    "url": "https://us.i.posthog.com/flags/?v=2&ip=0&_=1794289434528&ver=1.364.1&compression=base64",
+    "step_index": 1
+  },
+  {
+    "method": "POST",
+    "status": null,
+    "kind": "request-finished",
+    "resource_type": "fetch",
+    "url": "https://us.i.posthog.com/flags/?v=2&ip=0&_=1794289434528&ver=1.364.1&compression=base64",
+    "step_index": 1
+  },
+  {
+    "method": "POST",
+    "status": 201,
+    "kind": "response",
+    "resource_type": "fetch",
+    "url": "https://papi.packative.com/public/online/price",
+    "step_index": 1
+  },
+  {
+    "method": "POST",
+    "status": null,
+    "kind": "request-finished",
+    "resource_type": "fetch",
+    "url": "https://papi.packative.com/public/online/price",
+    "step_index": 1
+  },
+  {
+    "method": "GET",
+    "status": 200,
+    "kind": "response",
+    "resource_type": "fetch",
+    "url": "https://packative.com/en/products?_rsc=g78F6uH23c0ZkVRC",
+    "step_index": 1
+  },
+  {
+    "method": "GET",
+    "status": null,
+    "kind": "request-failed",
+    "resource_type": "fetch",
+    "url": "https://packative.com/en/products?_rsc=g78F6uH23c0ZkVRC",
+    "step_index": 1
+  }
+]

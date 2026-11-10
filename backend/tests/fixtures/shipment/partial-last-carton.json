@@ -1,0 +1,22 @@
+{
+  "id": "fx-partial-last-carton",
+  "description": "Synthetic golden: 121 PCS / 12 PCS per carton => 11 CTN with last carton 1 PCS (not 132)",
+  "confirmed": {
+    "pieceQty": 121,
+    "piecesPerCarton": 12,
+    "cartonCount": 11,
+    "lastCartonQty": 1,
+    "grossKgPerCarton": 7.5,
+    "netKgPerCarton": 6.1
+  },
+  "expectedPacking": {
+    "cartonCount": 11,
+    "totalQty": 121,
+    "fullCartons": 10,
+    "lastCartonQty": 1
+  },
+  "forbidden": {
+    "totalQty": 132,
+    "paddedPieceQty": 132
+  }
+}

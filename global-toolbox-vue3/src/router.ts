@@ -62,6 +62,26 @@ const routes: RouteRecordRaw[] = [
     redirect: (to) => `/${to.params.locale}/shared/`,
   },
   {
+    path: '/:locale(en|zh|ko)/shipments/',
+    name: 'shipments',
+    component: Empty,
+    meta: { view: 'shipments' },
+  },
+  {
+    path: '/:locale(en|zh|ko)/shipments',
+    redirect: (to) => `/${to.params.locale}/shipments/`,
+  },
+  {
+    path: '/:locale(en|zh|ko)/shipments/:shipmentId/',
+    name: 'shipment-detail',
+    component: Empty,
+    meta: { view: 'shipment-detail' },
+  },
+  {
+    path: '/:locale(en|zh|ko)/shipments/:shipmentId',
+    redirect: (to) => `/${to.params.locale}/shipments/${to.params.shipmentId}/`,
+  },
+  {
     path: '/:locale(en|zh|ko)/pricing/',
     name: 'pricing',
     component: Empty,

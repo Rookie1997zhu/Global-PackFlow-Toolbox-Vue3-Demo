@@ -1,0 +1,39 @@
+Save → leave → reopen same designId (2026-11-10, KO store customer session)
+
+Precondition
+- URL: /editor/productbox-crashlock/prod_01HRQ7914HA85GC0S44N63A3AF?...&designId=46bfa110-18d3-4e6b-8ccb-f045268922dd&itemId=item_01M724A4QSTD786TTWB2W4Z308
+- /api/customer present; _medusa_jwt cookie present
+- Before save: Konva Image nodes=3 (2 artwork + dieline-overlay); CDN generated-images/.../2ababbca-.../image.webp visible
+- Screenshot: phase3-save-reopen-before.png
+
+Save click (저장)
+1) POST https://studio-api.packative.com/v1/editor/upload  → 200
+   FormData keys: file, designId, skipDatabase
+   Response data keys: uuid, url, s3Key, originalName, size, type
+   CDN url host: studio-cdn.packative.com
+   Path pattern: {tenant}/uploads/{customerId}/{designId}/{uuid}.png
+   Observed uuid: 28d75e5a-3d91-4f63-9e96-69430cb11f0d
+2) POST https://studio-api.packative.com/v1/editor/save → 200
+   FormData keys: design_id, canvas_data, thumbnail, metadata, scene_svg, dieline_url, canvas_width, canvas_height, base_layer_url
+   Response includes data.id (save-point id), tenantId, userId, designId, saveData.dieline_url
+   Observed save-point id: fbb18abc-0544-4641-8df3-ed65a0164a23
+   designId echoed: 46bfa110-18d3-4e6b-8ccb-f045268922dd
+   UI: button text "저장..." while disabled, then back to "저장"
+
+Leave
+- Navigate to https://packative.com/cart (session preserved; cart shows 디자인 수정)
+
+Reopen
+- Hard navigate back to same designId editor URL (not soft SPA state)
+- After load: Konva Image nodes=3 again
+  - 2× visible artwork Image nodes → same generated-images/.../2ababbca-.../image.webp
+  - 1× dieline-overlay (data:image/png)
+- Layers panel lists two "image.webp" entries
+- CDN probes (fetch):
+  - uploads/.../28d75e5a-....png → 200
+  - generated-images/.../2ababbca-.../image.webp → 200
+- Screenshot: phase3-save-reopen-after.png
+
+Verdict
+- Passed: design artwork persists across leave/reopen for same designId; not session-memory-only.
+- Notes: token/PII redacted; customerId path segments noted as pattern only.

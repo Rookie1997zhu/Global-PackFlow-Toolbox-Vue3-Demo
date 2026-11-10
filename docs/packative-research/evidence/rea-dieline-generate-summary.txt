@@ -1,0 +1,96 @@
+type=dict
+keys=['evidence_id', 'subject', 'provider', 'analysis_profile', 'predicate_type', 'operation', 'parameters', 'raw_result', 'normalized_result', 'confidence', 'authority', 'environment', 'limitations', 'relationship_coverage', 'locations', 'evidence_links']
+parameters.start_url = "dict(keys=['url', 'query'])"
+parameters.start_url.url = 'https://packative.com/en/products/productbox-crashlock'
+parameters.capture.network = "dict(keys=['request_body', 'response_body', 'header_values'])"
+parameters.capture.limits.max_network_transactions = 1000
+parameters.capture.limits.max_network_body_bytes = 16384
+parameters.capture.limits.max_network_body_allocation_bytes = 1048576
+parameters.capture.limits.max_network_header_allocation_bytes = 1048576
+parameters.capture.limits.max_network_metadata_allocation_bytes = 1048576
+normalized_result.scenario.network_content = "dict(keys=['request_body', 'response_body', 'header_values'])"
+normalized_result.scenario.limits.max_network_transactions = 1000
+normalized_result.scenario.limits.max_network_body_bytes = 16384
+normalized_result.scenario.limits.max_network_body_allocation_bytes = 1048576
+normalized_result.scenario.limits.max_network_header_allocation_bytes = 1048576
+normalized_result.scenario.limits.max_network_metadata_allocation_bytes = 1048576
+normalized_result.steps[0].before_url = "dict(keys=['url', 'origin', 'query_parameter_names', 'redacted'])"
+normalized_result.steps[0].before_url.url = 'about:blank'
+normalized_result.steps[0].after_url = "dict(keys=['url', 'origin', 'query_parameter_names', 'redacted'])"
+normalized_result.steps[0].after_url.url = 'https://packative.com/en/products/productbox-crashlock'
+normalized_result.steps[0].artifacts = "dict(keys=['screenshot', 'dom', 'accessibility', 'url', 'history', 'storage'])"
+normalized_result.steps[0].artifacts.screenshot = "dict(keys=['state', 'value'])"
+normalized_result.steps[0].artifacts.url = "dict(keys=['state', 'value'])"
+normalized_result.steps[0].artifacts.url.value.url = 'https://packative.com/en/products/productbox-crashlock'
+normalized_result.steps[1].before_url = "dict(keys=['url', 'origin', 'query_parameter_names', 'redacted'])"
+normalized_result.steps[1].before_url.url = 'https://packative.com/en/products/productbox-crashlock'
+normalized_result.steps[1].after_url = "dict(keys=['url', 'origin', 'query_parameter_names', 'redacted'])"
+normalized_result.steps[1].after_url.url = 'https://packative.com/en/products/productbox-crashlock'
+normalized_result.steps[1].artifacts = "dict(keys=['screenshot', 'dom', 'accessibility', 'url', 'history', 'storage'])"
+normalized_result.steps[1].artifacts.screenshot = "dict(keys=['state', 'value'])"
+normalized_result.steps[1].artifacts.url = "dict(keys=['state', 'value'])"
+normalized_result.steps[1].artifacts.url.value.url = 'https://packative.com/en/products/productbox-crashlock'
+normalized_result.steps[2].before_url = "dict(keys=['url', 'origin', 'query_parameter_names', 'redacted'])"
+normalized_result.steps[2].before_url.url = 'https://packative.com/en/products/productbox-crashlock'
+normalized_result.steps[2].after_url = "dict(keys=['url', 'origin', 'query_parameter_names', 'redacted'])"
+normalized_result.steps[2].after_url.url = 'https://packative.com/en/products/productbox-crashlock'
+normalized_result.steps[2].artifacts = "dict(keys=['screenshot', 'dom', 'accessibility', 'url', 'history', 'storage'])"
+normalized_result.steps[2].artifacts.screenshot = "dict(keys=['state', 'reason'])"
+normalized_result.steps[2].artifacts.url = "dict(keys=['state', 'reason'])"
+normalized_result.steps[3].before_url = "dict(keys=['url', 'origin', 'query_parameter_names', 'redacted'])"
+normalized_result.steps[3].before_url.url = 'https://packative.com/en/products/productbox-crashlock'
+normalized_result.steps[3].after_url = "dict(keys=['url', 'origin', 'query_parameter_names', 'redacted'])"
+normalized_result.steps[3].after_url.url = 'https://packative.com/en/products/productbox-crashlock'
+normalized_result.steps[3].artifacts = "dict(keys=['screenshot', 'dom', 'accessibility', 'url', 'history', 'storage'])"
+normalized_result.steps[3].artifacts.screenshot = "dict(keys=['state', 'reason'])"
+normalized_result.steps[3].artifacts.url = "dict(keys=['state', 'reason'])"
+normalized_result.steps[4].before_url = "dict(keys=['url', 'origin', 'query_parameter_names', 'redacted'])"
+normalized_result.steps[4].before_url.url = 'https://packative.com/en/products/productbox-crashlock'
+normalized_result.steps[4].after_url = "dict(keys=['url', 'origin', 'query_parameter_names', 'redacted'])"
+normalized_result.steps[4].after_url.url = 'https://packative.com/en/products/productbox-crashlock'
+normalized_result.steps[4].artifacts = "dict(keys=['screenshot', 'dom', 'accessibility', 'url', 'history', 'storage'])"
+normalized_result.steps[4].artifacts.screenshot = "dict(keys=['state', 'reason'])"
+normalized_result.steps[4].artifacts.url = "dict(keys=['state', 'reason'])"
+normalized_result.events.items[0].url = "dict(keys=['url', 'origin', 'query_parameter_names', 'redacted'])"
+normalized_result.events.items[0].url.url = 'https://packative.com/en/products/productbox-crashlock'
+normalized_result.events.items[2].url = "dict(keys=['url', 'origin', 'query_parameter_names', 'redacted'])"
+normalized_result.events.items[2].url.url = 'https://packative.com/en/products/productbox-crashlock'
+normalized_result.events.items[3].url = "dict(keys=['url', 'origin', 'query_parameter_names', 'redacted'])"
+normalized_result.events.items[3].url.url = 'https://assets.packative.com/icons/logo.svg'
+normalized_result.events.items[5].url = "dict(keys=['url', 'origin', 'query_parameter_names', 'redacted'])"
+normalized_result.events.items[5].url.url = 'https://assets.packative.com/images/packative-logo.svg'
+normalized_result.events.items[7].url = "dict(keys=['url', 'origin', 'query_parameter_names', 'redacted'])"
+normalized_result.events.items[7].url.url = 'https://packative.com/_next/image?url=https%3A%2F%2Fassets.packative.com%2Fimages%2Fproducts%2Fproductbox-crashlock.png&w=750&q=75'
+normalized_result.events.items[9].url = "dict(keys=['url', 'origin', 'query_parameter_names', 'redacted'])"
+normalized_result.events.items[9].url.url = 'https://packative-global-production.dominik-99e.workers.dev/_next/static/chunks/043miol97sbyh.css'
+normalized_result.events.items[11].url = "dict(keys=['url', 'origin', 'query_parameter_names', 'redacted'])"
+normalized_result.events.items[11].url.url = 'https://packative-global-production.dominik-99e.workers.dev/_next/static/chunks/15m0.ab4udg~0.js'
+normalized_result.events.items[13].url = "dict(keys=['url', 'origin', 'query_parameter_names', 'redacted'])"
+normalized_result.events.items[13].url.url = 'https://packative-global-production.dominik-99e.workers.dev/_next/static/chunks/14p8.bazr1_r1.js'
+normalized_result.events.items[15].url = "dict(keys=['url', 'origin', 'query_parameter_names', 'redacted'])"
+normalized_result.events.items[15].url.url = 'https://packative-global-production.dominik-99e.workers.dev/_next/static/chunks/14--o03lk4egg.js'
+normalized_result.events.items[17].url = "dict(keys=['url', 'origin', 'query_parameter_names', 'redacted'])"
+normalized_result.events.items[17].url.url = 'https://packative-global-production.dominik-99e.workers.dev/_next/static/chunks/0x0wtohv8nyck.js'
+normalized_result.events.items[19].url = "dict(keys=['url', 'origin', 'query_parameter_names', 'redacted'])"
+normalized_result.events.items[19].url.url = 'https://packative-global-production.dominik-99e.workers.dev/_next/static/chunks/0jim5skn.6qtf.js'
+normalized_result.events.omissions.network_transactions = 'list(len=0)'
+normalized_result.events.omissions.network_transaction_range = None
+normalized_result.limitations = ['Event sequence records provider receipt order; simultaneous browser causality is not inferred.', 'Network content is retained only when selected; Playwright response-body bytes are API results and are not guaranteed to match wire bytes.', 'Request bytes are limited to what Playwright exposes; not_exposed does not establish body absence or multipart file coverage.', 'Network content reads settle within 5 seconds each and the observer does not request bodies from 
+limitations = ['Artifact identity is unavailable for this observation.', 'Event sequence records provider receipt order; simultaneous browser causality is not inferred.', 'Network content is retained only when selected; Playwright response-body bytes are API results and are not guaranteed to match wire bytes.', 'Request bytes are limited to what Playwright exposes; not_exposed does not establish body absence or multipart file coverage.', 'Network content reads settle within 5 seconds each and th
+relationship_coverage = None
+url_count=19
+URL https://cdn-cookieye
+URL https://packative-global-production.dominik-99e.worker
+URL https://packative.com
+URL https://packative.com/?_r
+URL https://packative.com/_next/
+URL https://packative.com/_next/image?url=http
+URL https://packative.com/en/contact?_r
+URL https://packative.com/en/login?_r
+URL https://packative.com/en/portfolio?_r
+URL https://packative.com/en/product
+URL https://packative.com/en?_r
+URL https://packative.com/favicon.ico?favicon.13
+URL https://papi.packative.com
+URL https://papi.packative.com/public/online/price
+script_paths=['/_next/image?url=http']

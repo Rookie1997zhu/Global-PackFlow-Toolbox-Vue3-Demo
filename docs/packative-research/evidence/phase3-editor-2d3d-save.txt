@@ -1,0 +1,27 @@
+﻿Editor deep follow-up (2026-11-10, store customer session)
+
+Apply AI to panel
+- Clicking generated thumbnail places artwork on a dieline panel (2D). Selection shows mm size label (observed 25.0 x 52.0).
+- Evidence: phase3-ai-applied-to-dieline-2d.png
+
+3D
+- Toggle 3D loads Collada from cad.packative.com/resource-service/api/v1/resource/{a}/{b} (ct model/vnd.collada+xml) in-browser; unauthenticated curl => 403 RESOURCE_8 Forbidden.
+- Also uses cad.packative.com/resize-service:
+  GET processings?measurementUnit=mm|inch
+  GET materials?measurementUnit=mm|inch
+  POST session (204)
+  POST get-template-info
+  POST resize-template (repeated)
+- Evidence: phase3-editor-3d-collada.png
+
+Save / export-ish
+- POST studio-api.packative.com/v1/editor/upload -> CDN uploads/.../uuid.png (base-layer.png observed)
+- POST studio-api.packative.com/v1/editor/save -> saveData includes:
+  dieline_url: studio-cdn/.../dielines/productbox-crashlock/100_80_80/dieline.svg
+  canvas_width: 2048, canvas_height: 1216
+  scene_svg_url: studio-cdn/.../save-po... (truncated)
+- Public dieline SVG sample saved: studio-dieline-100_80_80.svg
+  Layers via attributes: ev-style=Cutting (red), Creasing (green)
+
+Cart
+- 카트에 담기 opens print guideline dialog + 장바구니 담기; confirming re-triggers upload/save. Dedicated cart commerce API not clearly captured in this pass (may be same-origin navigation or cookie-bound).

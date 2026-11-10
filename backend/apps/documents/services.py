@@ -16,6 +16,7 @@ from apps.schemes.models import Scheme, SchemeRevision
 from .builders import (
     CI_DISCLAIMER_EN,
     CI_DISCLAIMER_KO,
+    cargo_needs_review,
     invoice_from_cargo,
     invoice_totals,
     packing_from_cargo,
@@ -53,10 +54,69 @@ def _get_scheme_revision(scheme_id: str, revision_no: int | None) -> tuple[Schem
     return scheme, rev
 
 
+def _normalize_confirmed_packing_lines(raw_lines: list) -> list[dict]:
+    lines: list[dict] = []
+    for row in raw_lines:
+        if not isinstance(row, dict):
+            raise ValidationError({"lines": ["Each packing line must be an object"]})
+        net = row.get("netKg")
+        lines.append(
+            {
+                "sku": str(row.get("sku") or ""),
+                "cartonFrom": int(row.get("cartonFrom") or 0),
+                "cartonTo": int(row.get("cartonTo") or 0),
+                "qtyPerCarton": int(row.get("qtyPerCarton") or 0),
+                "grossKg": float(row.get("grossKg") or 0),
+                "netKg": None if net is None else float(net),
+                "lengthCm": float(row.get("lengthCm") or 0),
+                "widthCm": float(row.get("widthCm") or 0),
+                "heightCm": float(row.get("heightCm") or 0),
+            }
+        )
+    return lines
+
+
+def _normalize_confirmed_invoice_lines(raw_lines: list) -> list[dict]:
+    lines: list[dict] = []
+    for row in raw_lines:
+        if not isinstance(row, dict):
+            raise ValidationError({"lines": ["Each invoice line must be an object"]})
+        lines.append(
+            {
+                "sku": str(row.get("sku") or ""),
+                "description": str(row.get("description") or row.get("sku") or ""),
+                "qty": float(row.get("qty") or 0),
+                "unitPrice": float(row.get("unitPrice") or 0),
+                "unit": str(row.get("unit") or "PCS"),
+            }
+        )
+    return lines
+
+
 def _build_payload(kind: str, *, rev: SchemeRevision | None, data: dict, locale: str) -> dict:
+    source_mode = str(data.get("sourceMode") or "scheme_only")
+    formal = bool(data.get("formal"))
+    confirmed = source_mode == "confirmed_lines"
+
     if kind == DocumentKind.PACKING_LIST:
         cargo = list(rev.cargo_json) if rev else []
-        lines = packing_from_cargo(cargo)
+        if confirmed:
+            lines = _normalize_confirmed_packing_lines(list(data.get("lines") or []))
+            needs_review = any(line.get("netKg") is None for line in lines)
+        else:
+            lines = packing_from_cargo(cargo)
+            needs_review = cargo_needs_review(cargo) or any(
+                line.get("needsReview") or line.get("netKg") is None for line in lines
+            )
+        if formal and (needs_review or not lines):
+            raise ValidationError(
+                {
+                    "formal": [
+                        "Formal packing list requires confirmed lines with net weight "
+                        "and explicit quantity basis"
+                    ]
+                }
+            )
         meta = {
             "shipper": str(data.get("shipper") or ""),
             "consignee": str(data.get("consignee") or ""),
@@ -68,12 +128,29 @@ def _build_payload(kind: str, *, rev: SchemeRevision | None, data: dict, locale:
             "meta": meta,
             "lines": lines,
             "totals": packing_totals(lines),
+            "needsReview": needs_review,
+            "legacyQuantityBasis": "unknown" if needs_review and not confirmed else "confirmed",
+            "sourceMode": source_mode,
             "templateVersion": TEMPLATE_VERSION,
         }
 
     if kind == DocumentKind.COMMERCIAL_INVOICE:
         cargo = list(rev.cargo_json) if rev else []
-        lines = invoice_from_cargo(cargo)
+        if confirmed:
+            lines = _normalize_confirmed_invoice_lines(list(data.get("lines") or []))
+            needs_review = False
+        else:
+            lines = invoice_from_cargo(cargo)
+            needs_review = cargo_needs_review(cargo)
+        if formal and (needs_review or not lines):
+            raise ValidationError(
+                {
+                    "formal": [
+                        "Formal commercial invoice requires confirmed lines "
+                        "and explicit quantity basis"
+                    ]
+                }
+            )
         meta = {
             "seller": str(data.get("seller") or ""),
             "buyer": str(data.get("buyer") or ""),
@@ -91,6 +168,8 @@ def _build_payload(kind: str, *, rev: SchemeRevision | None, data: dict, locale:
             "lines": lines,
             "totals": invoice_totals(lines),
             "disclaimer": disclaimer,
+            "needsReview": needs_review,
+            "sourceMode": source_mode,
             "templateVersion": TEMPLATE_VERSION,
         }
 
@@ -154,12 +233,16 @@ def create_report(
 ) -> Report:
     rev = None
     scheme = None
+    source_mode = str(data.get("sourceMode") or "scheme_only")
     if kind in {DocumentKind.PACKING_LIST, DocumentKind.COMMERCIAL_INVOICE}:
-        if not scheme_id:
+        if scheme_id:
+            scheme, rev = _get_scheme_revision(scheme_id, revision_no)
+            if str(scheme.team_id) != str(team.id):
+                raise Http404()
+        elif source_mode == "confirmed_lines" and data.get("lines"):
+            rev = None
+        else:
             raise ValidationError({"schemeId": ["Required for this report kind"]})
-        scheme, rev = _get_scheme_revision(scheme_id, revision_no)
-        if str(scheme.team_id) != str(team.id):
-            raise Http404()
     elif kind == DocumentKind.DIFF:
         if scheme_id:
             scheme, rev = _get_scheme_revision(scheme_id, revision_no)

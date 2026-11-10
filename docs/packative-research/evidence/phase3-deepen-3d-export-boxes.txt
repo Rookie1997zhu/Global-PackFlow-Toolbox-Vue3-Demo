@@ -1,0 +1,48 @@
+﻿# Deepen notes — 3D UV / export / multi-box (2026-11-10)
+
+## 3D / UV pipeline (verified)
+- CAD host alias: NEXT_PUBLIC_ENGVIEW_URL = https://cad.packative.com (EngView Packaging CAD).
+- Flow: resize session → get-template-info → resize-template → resource-service Collada (+ TextureResource1..4.png).
+- Collada: model/vnd.collada+xml ~1.17MB; library_images → ./TextureResource{1-4}.png
+- Texture fetch: 307 redirect to /resource-service/api/v1/resource/hash/{sha256}; sizes observed ~35KB / 77B placeholders.
+- Shading: profile_GLSL custom shaders; NEEDSTANYTEXCOORDS; uniforms vertexToDesignMatrix / designToVertexMatrix; varying designPos — design-space projection for artwork mapping (not only classic UV atlas).
+- TEXCOORD semantic present (count~15) plus crease/curve attrs crInfo*/curvedInfo*.
+- 2D side: Konva; assets area_mask.png + dieline.png + dieline.svg; APIs /v1/editor/dieline (+ /overlay) require X-Tenant-Key.
+- Editor UI: fold slider in 3D; Switch to white overlay; WebGL ANGLE NVIDIA.
+
+## Print export (partial)
+- Cart: NO direct print PDF download; only 디자인 수정 + save-point thumbnail.png.
+- Client bundle i18n: export modes upscale / vectorize / export — "Print-ready files will be emailed"; 300 DPI ~15s else ~30s; vectorize → PDF emailed ~20s.
+- Direct editor chrome observed: 저장 / 카트에 담기 — no visible Export button on KO crashlock editor in this session (export UI may be EN-only / account / post-order).
+- papi model format=eps works for productbox-crashlock, mailerbox, sleeve, tray, pillowbox.
+- format=pdf|svg|dxf|ai|png|jpg for crashlock returned ~2.1KB PDF-1.7 stub (not usable dieline).
+
+## Multi-box EPS BoundingBox (pt)
+- crashlock 100x80x50: 1119x626
+- crashlock 120x90x60: 1289x696
+- crashlock 55x55x75: 722x590
+- mailerbox 100x80x50: 984x950 ; 200x150x50: 1268x1347
+- sleeve 100x80x50: 1117x199
+- tray 150x100x40: 1095x942
+- pillowbox 80x60x40: 440x369 ; 100x80x40: 553x454
+
+## Studio SVG parametric (same topology)
+- productbox-crashlock 100_80_80: viewBox ~1406.76 x 834.163; Cutting=63 Creasing=14; 8 paths
+- productbox-crashlock 55_55_75: viewBox ~877.627 x 664.084; Cutting=63 Creasing=14; 8 paths
+- 120_90_60 SVG on CDN returned 403 (not pre-cached); EPS still available via papi.
+
+## Evidence files
+- cad-collada-bf9ac3b1.dae, cad-tex-bf9-TextureResource*.png
+- area_mask-100_80_80.png, dieline-png-100_80_80.png
+- studio-dieline-productbox-crashlock-55_55_75.svg
+- dieline-{mailerbox,sleeve,tray,pillow}-*.eps
+- phase3-editor-2d-after-apply.png, phase3-editor-3d-with-panel-art.png
+
+## /v1/editor/dieline (verified with X-Tenant-Key + X-Tenant-User-Id)
+Keys: original_dieline, dieline, area_mask, main_mask, total_mask (+ *_url), original_svg_url,
+original_width/height=1407x834, canvas_width/height=2048x1216, bbox_length/width, image_*,
+papi_code, length/width/height, db_id, evd_uuid, version, timestamp.
+POST /dieline/overlay rejected for public key without valid Origin (403).
+
+## Fold slider
+aria-valuemin=0 aria-valuemax=5500 (observed stuck/at max 5500 after End key).

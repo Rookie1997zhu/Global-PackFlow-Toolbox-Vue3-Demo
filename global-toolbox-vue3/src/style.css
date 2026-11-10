@@ -6,3 +6,21 @@
 .auth-card{background:#fff;border-radius:14px;padding:22px;width:min(100%,380px);box-shadow:0 18px 40px rgba(20,40,70,.2)}
 .auth-card h3{margin:0 0 14px;font-size:18px}
 .linkish{border:0;background:transparent;color:#2757c5;font-weight:700;font-size:11px;padding:0;cursor:pointer}
+
+.shipment-alert{margin-bottom:12px;border-color:#f0c9b8;background:#fff8f4}
+.shipment-alert.conflict{border-color:#e8b39a}
+.import-wizard{min-width:0}
+.import-wizard .table-scroll{max-width:100%}
+@media(max-width:950px){
+  .shipment-list-toolbar .panel-heading{flex-direction:column;align-items:stretch}
+  .shipment-list-toolbar .search-wrap{width:100%;min-width:0}
+  .shipment-list-toolbar .cell-name{max-width:none!important;width:100%}
+  .shipment-list-toolbar .btn-primary,.shipment-list-toolbar .btn-secondary{width:100%}
+  .shipment-tabs{gap:6px}
+  .shipment-actions .btn-primary,.shipment-actions .btn-secondary{flex:1 1 calc(50% - 8px);min-width:120px}
+}
+@media(max-width:700px){
+  .import-wizard .btn-row{flex-direction:column}
+  .import-wizard .btn-row > *{width:100%}
+  .shipment-actions .btn-primary,.shipment-actions .btn-secondary{flex:1 1 100%}
+}

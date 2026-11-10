@@ -165,3 +165,144 @@ class FilesImportsApiTests(TestCase):
             reverse("file-download", kwargs={"file_id": file_id})
         )
         self.assertEqual(download.status_code, 404)
+
+    def test_cp949_korean_csv_parses_headers(self) -> None:
+        """CP949-encoded Korean CSV must decode (utf-8-sig first currently breaks this)."""
+        from apps.imports.parsing import parse_csv_bytes
+
+        raw = (
+            "품명,가로,세로,높이,총중량,수량\n"
+            "박스,42,32,28,7.5,10\n"
+        ).encode("cp949")
+        rows = parse_csv_bytes(raw)
+        self.assertEqual(rows[0][0], "품명")
+        self.assertEqual(rows[1][0], "박스")
+
+        self._register("cp949@import.test")
+        file_id = self._upload_bytes("kr-cp949.csv", raw)
+        preview = self.client.post(
+            reverse("import-preview"),
+            {"fileId": file_id},
+            format="json",
+            **self._csrf(),
+        )
+        self.assertEqual(preview.status_code, 201, preview.content)
+        pdata = preview.json()["data"]
+        self.assertIsNotNone(pdata["suggestedMapping"].get("sku"))
+
+    def test_mapping_template_team_scoped_and_shipment_commit(self) -> None:
+        self._register("owner3@import.test")
+        mapping = {"sku": 0, "qty": 2, "lengthCm": 5, "widthCm": 6, "heightCm": 7, "grossKg": 4, "boxCount": 8}
+        created = self.client.post(
+            reverse("import-mapping-templates"),
+            {"name": "KR default", "mapping": mapping},
+            format="json",
+            **self._csrf(),
+        )
+        self.assertEqual(created.status_code, 201, created.content)
+        listed = self.client.get(reverse("import-mapping-templates"))
+        self.assertEqual(listed.status_code, 200)
+        self.assertEqual(len(listed.json()["data"]["items"]), 1)
+
+        file_id = self._upload_bytes("kr-ship.csv", KR_CSV_BYTES)
+        preview = self.client.post(
+            reverse("import-preview"),
+            {"fileId": file_id, "mapping": mapping},
+            format="json",
+            **self._csrf(),
+        )
+        self.assertEqual(preview.status_code, 201, preview.content)
+        pdata = preview.json()["data"]
+        commit = self.client.post(
+            reverse("import-commit", kwargs={"import_id": pdata["id"]}),
+            {"target": "shipment", "shipmentNo": "IMP-SHIP-1", "mapping": mapping},
+            format="json",
+            **self._csrf(),
+        )
+        self.assertEqual(commit.status_code, 200, commit.content)
+        ship = commit.json()["data"]["shipment"]
+        self.assertEqual(ship["shipmentNo"], "IMP-SHIP-1")
+        self.assertGreaterEqual(len(ship["payload"]["productLines"]), 1)
+        from apps.shipments.conservation import validate_piece_carton_conservation
+
+        self.assertEqual(validate_piece_carton_conservation(ship["payload"]), [])
+
+        self.client.logout()
+        self._register("other@import.test")
+        other_list = self.client.get(reverse("import-mapping-templates"))
+        self.assertEqual(other_list.status_code, 200)
+        self.assertEqual(other_list.json()["data"]["items"], [])
+
+    def _multi_sheet_xlsx_bytes(self) -> bytes:
+        import io
+
+        from openpyxl import Workbook
+
+        wb = Workbook()
+        ws0 = wb.active
+        ws0.title = "Ignore"
+        ws0.append(["junk"])
+        ws0.append(["x"])
+        ws1 = wb.create_sheet("Cargo")
+        ws1.append(["품명", "수량", "단위", "총중량", "가로", "세로", "높이", "박스수"])
+        ws1.append(["SKU-MS", 24, "PCS", 5.0, 40, 30, 20, 2])
+        buf = io.BytesIO()
+        wb.save(buf)
+        return buf.getvalue()
+
+    def test_xlsx_sheet_index_preview_and_commit(self) -> None:
+        self._register("sheets@import.test")
+        raw = self._multi_sheet_xlsx_bytes()
+        file_id = self._upload_bytes("multi.xlsx", raw)
+
+        bad = self.client.post(
+            reverse("import-preview"),
+            {"fileId": file_id, "sheetIndex": 99},
+            format="json",
+            **self._csrf(),
+        )
+        self.assertEqual(bad.status_code, 400, bad.content)
+
+        preview0 = self.client.post(
+            reverse("import-preview"),
+            {"fileId": file_id, "sheetIndex": 0},
+            format="json",
+            **self._csrf(),
+        )
+        self.assertEqual(preview0.status_code, 201, preview0.content)
+        p0 = preview0.json()["data"]
+        self.assertGreaterEqual(len(p0.get("sheets") or []), 2)
+        self.assertEqual(p0["sheetIndex"], 0)
+        self.assertEqual(p0["headers"][0], "junk")
+
+        preview1 = self.client.post(
+            reverse("import-preview"),
+            {"fileId": file_id, "sheetIndex": 1},
+            format="json",
+            **self._csrf(),
+        )
+        self.assertEqual(preview1.status_code, 201, preview1.content)
+        p1 = preview1.json()["data"]
+        self.assertEqual(p1["sheetIndex"], 1)
+        self.assertEqual(p1["headers"][0], "품명")
+        self.assertEqual(p1["suggestedMapping"].get("sku"), 0)
+
+        mismatch = self.client.post(
+            reverse("import-commit", kwargs={"import_id": p1["id"]}),
+            {"name": "Sheet1 cargo", "sheetIndex": 0},
+            format="json",
+            **self._csrf(),
+        )
+        self.assertEqual(mismatch.status_code, 400, mismatch.content)
+
+        commit = self.client.post(
+            reverse("import-commit", kwargs={"import_id": p1["id"]}),
+            {"name": "Sheet1 cargo", "sheetIndex": 1},
+            format="json",
+            **self._csrf(),
+        )
+        self.assertEqual(commit.status_code, 200, commit.content)
+        cargo = commit.json()["data"]["cargo"]
+        self.assertEqual(len(cargo), 1)
+        self.assertEqual(cargo[0]["sku"], "SKU-MS")
+        self.assertEqual(cargo[0]["length"], 40.0)

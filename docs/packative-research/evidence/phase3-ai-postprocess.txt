@@ -1,0 +1,40 @@
+AI postprocess tools (2026-11-10, KO store session, Crash Lock designId=46bfa110-...)
+
+UI (generated-images gallery / selected thumb)
+- Visible actions: 편집-credits | 배경 제거-credits | 벡터화-credits | 자르기
+- Upscale / 업스케일 / 확대: Not Found in this KO editor gallery
+- Screenshots: phase3-ai-postprocess-actions.png; phase3-ai-postprocess-bg-remove.png; phase3-ai-postprocess-edit-ui.png
+
+1) 자르기 (crop)
+- Opens local crop UI with 적용 / 취소
+- Apply: no studio-api call observed (client-side only in this pass)
+
+2) 배경 제거 → Passed
+- POST https://studio-api.packative.com/v1/editor/image-tools/bg-remove
+  Body JSON keys: image_url
+  Resp: {status:success, image_url: .../generated-images/{cus}/{uuid}/image.png}
+- POST /v1/editor/edit/history  FormData keys: image_url, parent_image_id, tool, design_id
+- GET /v1/editor/edit/history?image_id=...
+- GET /v1/editor/generated-images?designId=...  → tool:"image_remove_bg", generationNumber increments (v2)
+
+3) 벡터화 → Passed
+- POST /v1/editor/image-tools/vectorize
+  Body JSON keys: image_url
+  Resp: {status:success, image_url: .../image.svg}
+- Same edit/history + generated-images refresh
+- tool:"image_vectorize" (v3)
+
+4) 편집 → Passed
+- UI: 영역선택 브러쉬 (optional size), 프롬프트 textarea, note "SVG images will be converted to raster format", 생성
+- POST /v1/editor/edit
+  FormData keys: prompt, reference_image_url, design_id, original_image_id, parent_image_id
+  Resp: {status:success, image_url:.../image.webp, db_image_id, generation_number, original_image_id}
+- generated-images tool:"edit"
+
+Credits note
+- UI labels show "- credits" on 편집/배경 제거/벡터화; this session completed without a separate paywall modal (credits may already be available on account). No separate credit-balance API captured.
+
+Verdict
+- Passed: bg-remove, vectorize, edit APIs + version chain via edit/history
+- Partial: crop is UI-only (no API)
+- Not Found: upscale entry in KO gallery

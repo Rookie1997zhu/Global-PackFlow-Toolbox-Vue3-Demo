@@ -20,6 +20,7 @@ import {
 } from './useInvoice'
 import { isLoggedIn } from '../../shared/auth/session'
 import { cloudGenerateReport, ensureSchemeId } from '../../shared/reports/cloudReport'
+import { buildConfirmedReportBody } from '../../shared/reports/confirmedReportBody'
 import type { ReportFormat } from '../../api/reports'
 
 const props = defineProps<{ t: (key: string) => string }>()
@@ -116,20 +117,26 @@ const cloudExport = async (format: ReportFormat) => {
       cargo: cargo.value,
       locale: hostLocale.value,
     })
-    await cloudGenerateReport({
-      kind: 'commercial_invoice',
-      format,
-      locale: hostLocale.value,
-      schemeId,
-      seller: meta.seller,
-      buyer: meta.buyer,
-      invoiceNo: meta.invoiceNo,
-      po: meta.po,
-      currency: meta.currency,
-      incoterms: meta.incoterms,
-      paymentTerms: meta.paymentTerms,
-      title: props.t('commercialInvoice'),
-    })
+    await cloudGenerateReport(
+      buildConfirmedReportBody({
+        kind: 'commercial_invoice',
+        format,
+        locale: hostLocale.value,
+        schemeId,
+        lines: lines.value,
+        formal: false,
+        meta: {
+          seller: meta.seller,
+          buyer: meta.buyer,
+          invoiceNo: meta.invoiceNo,
+          po: meta.po,
+          currency: meta.currency,
+          incoterms: meta.incoterms,
+          paymentTerms: meta.paymentTerms,
+          title: props.t('commercialInvoice'),
+        },
+      }),
+    )
     cloudMsg.value = props.t('cloudReportDone')
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)

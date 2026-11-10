@@ -1,0 +1,12 @@
+flowchart TB
+  User[Browser] --> Caddy[Caddy]
+  Caddy --> FE[FrontendStatic]
+  Caddy --> API[DjangoAPI]
+  API --> PG[(PostgreSQL)]
+  API --> Redis[(Redis)]
+  Redis --> Worker[CeleryWorker]
+  Worker --> AI[AIAdapter]
+  Worker --> Prepress[ExportPrepress]
+  Worker --> Media[MediaStorage]
+  FE --> Geom[DielineGeomTS]
+  FE --> Three[ThreeJS]

@@ -14,10 +14,24 @@ CONTAINER_PRESETS_MM = {
 }
 
 
-def cargo_to_skus(cargo: list[dict], *, allow_rotate: bool = True) -> list[dict]:
+def cargo_to_skus(cargo: list[dict], *, allow_rotate: bool = True, sku_overrides: dict | None = None) -> list[dict]:
+    overrides = sku_overrides or {}
     skus: list[dict] = []
     for i, row in enumerate(cargo or []):
         sku = str(row.get("sku") or f"SKU-{i + 1}")
+        ov = overrides.get(sku) or {}
+        if "allowRotate" in row and row.get("allowRotate") is not None:
+            rotate = bool(row.get("allowRotate"))
+        elif "allowRotate" in ov:
+            rotate = bool(ov.get("allowRotate"))
+        else:
+            rotate = bool(allow_rotate)
+        if "stackable" in row and row.get("stackable") is not None:
+            stackable = bool(row.get("stackable"))
+        elif "stackable" in ov:
+            stackable = bool(ov.get("stackable"))
+        else:
+            stackable = True
         skus.append(
             {
                 "id": sku,
@@ -27,8 +41,8 @@ def cargo_to_skus(cargo: list[dict], *, allow_rotate: bool = True) -> list[dict]
                 "height": float(row.get("height") or 0) * 10,
                 "weight": float(row.get("weight") or 0),
                 "qty": int(float(row.get("qty") or 0)),
-                "allowRotate": allow_rotate,
-                "stackable": True,
+                "allowRotate": rotate,
+                "stackable": stackable,
                 "color": "",
             }
         )
@@ -51,14 +65,38 @@ def resolve_container(params: dict) -> dict:
     return base
 
 
+def _sku_overrides(params: dict) -> dict[str, dict]:
+    raw = params.get("skus") or []
+    out: dict[str, dict] = {}
+    if not isinstance(raw, list):
+        return out
+    for item in raw:
+        if not isinstance(item, dict):
+            continue
+        sid = str(item.get("id") or item.get("sku") or "")
+        if not sid:
+            continue
+        out[sid] = item
+    return out
+
+
 def build_engine_payload(cargo: list[dict], params: dict) -> dict:
     allow = params.get("allowRotate", True)
+    overrides = _sku_overrides(params)
     return {
         "container": resolve_container(params),
-        "skus": cargo_to_skus(cargo, allow_rotate=bool(allow)),
+        "skus": cargo_to_skus(cargo, allow_rotate=bool(allow), sku_overrides=overrides),
         "params": {
             "containerPreset": params.get("containerPreset") or "40HQ",
             "allowRotate": bool(allow),
+            "skus": [
+                {
+                    "id": s["id"],
+                    "allowRotate": s["allowRotate"],
+                    "stackable": s["stackable"],
+                }
+                for s in cargo_to_skus(cargo, allow_rotate=bool(allow), sku_overrides=overrides)
+            ],
         },
     }
 
@@ -70,8 +108,10 @@ def input_hash(payload: dict) -> str:
 
 def normalize_params(raw: dict | None) -> dict[str, Any]:
     raw = raw or {}
+    skus = raw.get("skus") if isinstance(raw.get("skus"), list) else None
     return {
         "containerPreset": str(raw.get("containerPreset") or "40HQ"),
         "allowRotate": bool(raw.get("allowRotate", True)),
         "custom": raw.get("custom") or None,
+        "skus": skus,
     }

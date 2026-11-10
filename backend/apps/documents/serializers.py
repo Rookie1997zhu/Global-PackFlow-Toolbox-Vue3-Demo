@@ -12,6 +12,13 @@ class ReportCreateSerializer(serializers.Serializer):
     schemeId = serializers.CharField(max_length=40, required=False, allow_blank=True)
     revisionNo = serializers.IntegerField(required=False, min_value=1)
     teamId = serializers.UUIDField(required=False)
+    sourceMode = serializers.ChoiceField(
+        choices=["scheme_only", "confirmed_lines"],
+        required=False,
+        default="scheme_only",
+    )
+    lines = serializers.ListField(child=serializers.DictField(), required=False)
+    formal = serializers.BooleanField(required=False, default=False)
 
     # packing / invoice headers
     title = serializers.CharField(max_length=200, required=False, allow_blank=True)
@@ -37,8 +44,15 @@ class ReportCreateSerializer(serializers.Serializer):
     def validate(self, attrs):
         kind = attrs["kind"]
         if kind in {DocumentKind.PACKING_LIST, DocumentKind.COMMERCIAL_INVOICE}:
-            if not attrs.get("schemeId"):
+            confirmed = attrs.get("sourceMode") == "confirmed_lines"
+            if confirmed and not attrs.get("lines"):
+                raise serializers.ValidationError(
+                    {"lines": "Required when sourceMode=confirmed_lines"}
+                )
+            if not confirmed and not attrs.get("schemeId"):
                 raise serializers.ValidationError({"schemeId": "Required"})
+            if confirmed and not attrs.get("schemeId") and not attrs.get("lines"):
+                raise serializers.ValidationError({"lines": "Required without schemeId"})
         if kind == DocumentKind.DIFF:
             if not attrs.get("expected") and not attrs.get("actual"):
                 raise serializers.ValidationError(

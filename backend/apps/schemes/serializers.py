@@ -17,6 +17,16 @@ class CargoItemSerializer(serializers.Serializer):
     weight = serializers.FloatField()
     qty = serializers.FloatField()
     price = serializers.FloatField(required=False, default=0)
+    quantityBasis = serializers.ChoiceField(
+        choices=["piece", "carton", "unknown"],
+        required=False,
+        allow_null=True,
+    )
+    pieceQty = serializers.FloatField(required=False, allow_null=True)
+    piecesPerCarton = serializers.FloatField(required=False, allow_null=True)
+    netKg = serializers.FloatField(required=False, allow_null=True)
+    allowRotate = serializers.BooleanField(required=False)
+    stackable = serializers.BooleanField(required=False)
 
     def validate_length(self, value: float) -> float:
         if value is None or value <= 0:

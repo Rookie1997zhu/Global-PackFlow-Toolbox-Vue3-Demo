@@ -1,0 +1,38 @@
+Packative login follow-up evidence notes
+Date: 2026-11-10
+PII: email redacted as 53***@qq.com
+
+A. Auth state (已验证)
+- Cookie sb-zumxseuiallfcixygtch-auth-token present (base64- JSON session).
+- JWT role=authenticated; expires_at skew ~50+ minutes at capture time.
+- /en/account reachable: My account / Logout / Personal Information; email field shows account email (readonly).
+- KO header on product pages still shows 「로그인 / 회원가입」 despite cookie.
+- KO /account → 404「페이지를 찾을 수 없어요」(account path is EN-centric: /en/account).
+- GET /api/customer (credentials include) → HTTP 200 body {"customer":null}.
+
+B. Studio entry (已验证)
+- Viewport must be desktop (md+). Studio radio DOM id=product-detail-custom-design-selection
+  class includes "hidden md:flex"; at width=640 it is display:none; at 1440 it appears.
+- On KO PDP productbox-crashlock / prod_01HRQ7914HA85GC0S44N63A3AF:
+  Design radios: 「다운로드 · 업로드」 | 「실시간 간편 디자인」.
+- Selecting Studio shows copy: 온라인 에디터로 직접 디자인 / 로고 및 이미지 업로드 / 전개도에 맞춰 바로 디자인.
+- CTA card (div.cursor-pointer): 「간편하게 온라인으로 디자인하기 / 3D 프리뷰까지!」
+- Click CTA → navigate to:
+  /editor/productbox-crashlock/prod_01HRQ7914HA85GC0S44N63A3AF
+  ?length=100&width=80&height=80&quantity=250&coating=matte
+  &hash=2d0eb3301031cfc6d68d0ceac4dd5b72afe19dfa
+- Analytics: GA event name go_to_editor on editor URL.
+- Editor page shows Korean login dialog (로그인/회원가입) even with valid JWT + localStorage hydrate from cookie.
+- Inference (高置信): editor gate depends on store customer record, not only Supabase session; customer=null blocks Studio.
+
+C. Dieline download (已验证 / 部分)
+- Custom size radio 「사이즈 직접 입력」 works; inputs 가로/세로/높이(mm).
+- Sticky 「바로 주문」 can intercept clicks; JS .click() / scrollIntoView bypass needed in automation.
+- Click 「전개도 파일 다운로드」 with customer=null opened login modal (evidence PNG).
+- Parallel: POST https://papi.packative.com/public/online/price → 201 (pricing still public).
+- Dedicated dieline binary URL / Content-Type still not captured this pass.
+
+D. Screenshots
+- phase1-ko-desktop-nav.png
+- phase1-editor-login-wall.png
+- phase2-dieline-download-login-wall.png

@@ -19,7 +19,13 @@ from common.tenancy import require_membership, require_role, user_teams_qs
 
 from .models import Scheme
 from .serializers import SchemeImportSerializer, SchemeWriteSerializer
-from .services import append_revision, create_scheme, restore_revision, scheme_to_document
+from .services import (
+    SchemeVersionConflict,
+    append_revision,
+    create_scheme,
+    restore_revision,
+    scheme_to_document,
+)
 
 WRITE_ROLES = {Role.OWNER, Role.ADMIN, Role.EDITOR}
 READ_ROLES = {Role.OWNER, Role.ADMIN, Role.EDITOR, Role.VIEWER}
@@ -154,17 +160,22 @@ class SchemeDetailView(APIView):
             raise ValidationError(
                 {"rowVersion": ["required via If-Match header or body.rowVersion"]}
             )
+        # Fast path only; authoritative check is inside select_for_update.
         if expected != scheme.row_version:
             return _conflict(request, expected, scheme.row_version)
 
-        scheme = append_revision(
-            scheme=scheme,
-            user=request.user,
-            name=data["name"],
-            locale=data.get("locale") or scheme.locale,
-            cargo=data["cargo"],
-            meta=data.get("meta") or {},
-        )
+        try:
+            scheme = append_revision(
+                scheme=scheme,
+                user=request.user,
+                name=data["name"],
+                locale=data.get("locale") or scheme.locale,
+                cargo=data["cargo"],
+                meta=data.get("meta") or {},
+                expected_row_version=expected,
+            )
+        except SchemeVersionConflict as exc:
+            return _conflict(request, exc.expected, exc.current)
         return ok(scheme_to_document(scheme))
 
     @transaction.atomic

@@ -1,0 +1,31 @@
+Text / elements / main-area color → save (2026-11-10)
+
+Session: Crash Lock designId=46bfa110-... store customer
+
+UI
+- 텍스트 → 텍스트 상자 추가 → Konva Text ("New Text"); style controls include 텍스트 색상 / Extra Large / Reg
+- 요소 → shapes: Rectangle, Rounded Rectangle, Circle, Triangle, Right Triangle, Diamond; fill control 채우기 색상
+- 메인 영역 디자인 → 색상 presets: White / Black / Beige / Light Pink; selected "선택: Beige" (local only, no API until generate)
+- Screenshots: phase3-text-elements-ui.png; phase3-main-area-color-selected.png
+
+Save capture (FormData.append hook)
+1) POST /v1/editor/upload FormData: file, designId, skipDatabase → 200
+2) POST /v1/editor/save FormData keys:
+   design_id, canvas_data, thumbnail, metadata, scene_svg, dieline_url, canvas_width, canvas_height, base_layer_url
+
+canvas_data JSON (version "1.1") top keys:
+  version, timestamp, konvaTexts, konvaImages, konvaElements, imageInfo,
+  isDielineVisible, isDielineInverted, backgroundColor, viewport
+
+Observed objects (redacted):
+- konvaTexts[]: {id:text_*, text:"New Text", fontSize, fontFamily, fill, x,y,width,height, align, isBold/Italic/Underline, opacity, name, visible, zIndex, ...}
+- konvaElements[]: {id:element_*, type:"circle", category:"shapes", name:"Circle", fill:"#E5E7EB", x,y,width,height, rotation, scaleX/Y, opacity, visible, zIndex, createdAt}
+- konvaImages[]: count 3 (prior AI assets)
+- backgroundColor: null  (AI panel Beige selection NOT written here)
+- metadata: editorUrl + papiOptions (productCode, LWH, surface coating/colors) — no Beige / backgroundColorHex
+
+Color conclusion
+- Main-area 색상 is generation UI state (feeds work-history.generationInfo.backgroundColorHex when generating; previously null).
+- Selecting Beige alone did not emit studio-api and did not set canvas_data.backgroundColor.
+
+Verdict: Passed for text+shape persistence in canvas_data; Partial for color (selected in UI, not in this save payload).

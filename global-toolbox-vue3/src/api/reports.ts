@@ -25,6 +25,9 @@ export type ReportCreateBody = {
   locale?: string
   schemeId?: string
   revisionNo?: number
+  sourceMode?: 'scheme_only' | 'confirmed_lines'
+  lines?: Record<string, unknown>[]
+  formal?: boolean
   title?: string
   shipper?: string
   consignee?: string

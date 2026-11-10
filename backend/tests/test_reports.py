@@ -222,3 +222,66 @@ class ReportsApiTests(TestCase):
         dl = self.client.get(reverse("report-download", kwargs={"report_id": report_id}))
         self.assertEqual(dl.status_code, 410)
         self.assertEqual(dl.json()["code"], "REPORT_EXPIRED")
+
+    def test_xlsx_formula_injection_is_escaped(self) -> None:
+        """SKU/description starting with =/+/-/@ must not become Excel formulas."""
+        import io
+
+        from openpyxl import load_workbook
+
+        self._register("formula@reports.test")
+        evil = '=HYPERLINK("http://evil.example","x")'
+        created = self.client.post(
+            reverse("scheme-list-create"),
+            {
+                "version": 1,
+                "name": "Formula inject",
+                "locale": "ko",
+                "cargo": [
+                    {
+                        "sku": evil,
+                        "length": 42,
+                        "width": 32,
+                        "height": 28,
+                        "weight": 7.5,
+                        "qty": 2,
+                        "price": 1,
+                    }
+                ],
+                "meta": {},
+            },
+            format="json",
+            **self._csrf(),
+        )
+        self.assertEqual(created.status_code, 201, created.content)
+        scheme_id = created.json()["data"]["id"]
+        xlsx = self.client.post(
+            reverse("report-list-create"),
+            {
+                "kind": "packing_list",
+                "format": "xlsx",
+                "locale": "ko",
+                "schemeId": scheme_id,
+                "shipper": "+1+1",
+                "consignee": "@SUM(1,1)",
+                "po": "-1+1",
+            },
+            format="json",
+            **self._csrf(),
+        )
+        self.assertEqual(xlsx.status_code, 201, xlsx.content)
+        dl = self.client.get(
+            reverse("report-download", kwargs={"report_id": xlsx.json()["data"]["id"]})
+        )
+        self.assertEqual(dl.status_code, 200)
+        raw = b"".join(dl.streaming_content)
+        wb = load_workbook(filename=io.BytesIO(raw), data_only=False)
+        ws = wb.active
+        for row in ws.iter_rows():
+            for cell in row:
+                if cell.value is None:
+                    continue
+                self.assertNotEqual(getattr(cell, "data_type", None), "f")
+                text = str(cell.value)
+                if text[:1] in {"=", "+", "-", "@"}:
+                    self.fail(f"unescaped formula-like cell value: {text!r}")

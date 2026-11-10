@@ -1,0 +1,40 @@
+Multi-box Studio isomorphism (2026-11-10, KO store customer)
+
+Pattern
+- Editor URL: /editor/{productCode}/{prodId}?…&designId={uuid}
+- Tool strip isomorphic: AI / 배경 / 업로드 / 텍스트 / 요소 / 레이어 / 2D / 3D / 저장
+- Dieline CDN: studio-cdn/.../dielines/{productCode}/{L}_{W}_{H}/{dieline|total_mask|area_mask}.png
+- main-design-gen body keys unchanged across boxes; only URL productCode + size segment changes
+
+1) mailerbox — Passed (editor + main-design-gen)
+- PDP: /products/mailerbox/prod_01HR4VWJVZ8PD99XH7WQGKXN4V
+- Entry: 실시간 간편 디자인 → card「간편하게 온라인으로 디자인하기」
+- Editor: /editor/mailerbox/prod_01HR4VWJVZ8PD99XH7WQGKXN4V?variantId=…&quantity=250&coating=matte&designId=eecaa672-c775-4f6a-acb3-fccfb69e00cd
+- Title: Cardboard Mailer Box 160×160×70
+- POST /v1/llm/prompt (designTheme) → POST /v1/editor/main-design-gen → print/image_0.png → work-history
+- Masks:
+  …/dielines/mailerbox/160_160_70/dieline.png
+  …/dielines/mailerbox/160_160_70/total_mask.png
+  …/dielines/mailerbox/160_160_70/area_mask.png
+- Screenshot: phase3-multibox-mailer-editor.png
+
+2) pillowbox — Passed (editor + dieline path; tools isomorphic)
+- PDP: /products/pillowbox/prod_01HWW7QPF6D7AD1785QSA55HNJ (PI016 100×65×20)
+- Editor: /editor/pillowbox/prod_01HWW7QPF6D7AD1785QSA55HNJ?…&designId=721b721c-4688-42c2-982e-c92d02c2ddf7
+- Title: Pillow Box 100×65×20
+- Resource observed: …/dielines/pillowbox/100_65_20/area_mask.png (+ studio-api dieline/overlay, preprocessing)
+- Screenshot: phase3-multibox-pillow-editor.png
+- Note: full main-design-gen not re-run (credits); path + UI already prove isomorphic slug/size template
+
+3) sleeve — Partial
+- PDP: /products/sleeve/prod_01K1YV37GQ1R0JXDYHDKD4FMM9 shows 실시간 간편 디자인
+- Size dropdown lacked selectable standard sizes in this pass (listbox only custom-quote link); quantity required; card click did not navigate
+- Editor E2E for sleeve Not Run this session
+- Screenshot: phase3-multibox-sleeve-pdp.png
+- Expected path pattern (by isomorphism): dielines/sleeve/{L}_{W}_{H}/… (anonymous CDN GET → 403 without editor session signing)
+
+Contrast vs crashlock baseline
+- crashlock: dielines/productbox-crashlock/100_80_80/…
+- Same main-design-gen contract; productCode directory differs
+
+Verdict: Studio editor + mask CDN scheme isomorphic for mailerbox/pillowbox (+ crashlock). sleeve entry Blocked/Partial pending size selection.

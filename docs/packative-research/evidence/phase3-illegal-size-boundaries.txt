@@ -1,0 +1,108 @@
+﻿## Full model error JSON
+CASE 0x80x50 => {"statusCode":400,"message":"length-to-small","errorCode":"calc-700","additionalData":{"targetValue":25}}
+CASE 1x1x1 => {"statusCode":400,"message":"length-to-small","errorCode":"calc-700","additionalData":{"targetValue":25}}
+CASE 5000x5000x5000 => {"statusCode":400,"message":"length-to-big","errorCode":"calc-700","additionalData":{"targetValue":400}}
+CASE 50x100x80 => {"statusCode":400,"message":"length-2third-width","errorCode":"calc-700","additionalData":{"targetValue":null}}
+CASE 200x150x1 => {"statusCode":400,"message":"height-to-small","errorCode":"calc-700","additionalData":{"targetValue":25}}
+CASE 50x50x500 => {"statusCode":400,"message":"height-to-big","errorCode":"calc-700","additionalData":{"targetValue":400}}
+## Boundary length (w=80 h=50)
+L=10 => 400 {"statusCode":400,"message":"length-to-small","errorCode":"calc-700","additionalData":{"targetValue":25}}
+L=20 => 400 {"statusCode":400,"message":"length-to-small","errorCode":"calc-700","additionalData":{"targetValue":25}}
+L=30 => 400 {"statusCode":400,"message":"length-2third-width","errorCode":"calc-700","additionalData":{"targetValue":null}}
+L=40 => 400 {"statusCode":400,"message":"length-2third-width","errorCode":"calc-700","additionalData":{"targetValue":null}}
+L=45 => 400 {"statusCode":400,"message":"length-2third-width","errorCode":"calc-700","additionalData":{"targetValue":null}}
+L=50 => 400 {"statusCode":400,"message":"length-2third-width","errorCode":"calc-700","additionalData":{"targetValue":null}}
+L=53 => 200 size=20097
+L=54 => 200 size=20105
+L=55 => 200 size=20107
+L=60 => 200 size=20110
+L=100 => 200 size=20116
+L=200 => 200 size=20087
+L=300 => 200 size=20101
+L=400 => 200 size=20115
+L=500 => 400 {"statusCode":400,"message":"length-to-big","errorCode":"calc-700","additionalData":{"targetValue":400}}
+L=600 => 400 {"statusCode":400,"message":"length-to-big","errorCode":"calc-700","additionalData":{"targetValue":400}}
+L=700 => 400 {"statusCode":400,"message":"length-to-big","errorCode":"calc-700","additionalData":{"targetValue":400}}
+L=800 => 400 {"statusCode":400,"message":"length-to-big","errorCode":"calc-700","additionalData":{"targetValue":400}}
+L=900 => 400 {"statusCode":400,"message":"length-to-big","errorCode":"calc-700","additionalData":{"targetValue":400}}
+L=1000 => 400 {"statusCode":400,"message":"length-to-big","errorCode":"calc-700","additionalData":{"targetValue":400}}
+L=1200 => 400 {"statusCode":400,"message":"length-to-big","errorCode":"calc-700","additionalData":{"targetValue":400}}
+L=1500 => 400 {"statusCode":400,"message":"length-to-big","errorCode":"calc-700","additionalData":{"targetValue":400}}
+L=2000 => 400 {"statusCode":400,"message":"length-to-big","errorCode":"calc-700","additionalData":{"targetValue":400}}
+## Boundary height (l=100 w=80)
+H=5 => 400 {"statusCode":400,"message":"height-to-small","errorCode":"calc-700","additionalData":{"targetValue":25}}
+H=10 => 400 {"statusCode":400,"message":"height-to-small","errorCode":"calc-700","additionalData":{"targetValue":25}}
+H=15 => 400 {"statusCode":400,"message":"height-to-small","errorCode":"calc-700","additionalData":{"targetValue":25}}
+H=20 => 400 {"statusCode":400,"message":"height-to-small","errorCode":"calc-700","additionalData":{"targetValue":25}}
+H=25 => 200 size=20126
+H=30 => 200 size=20106
+H=40 => 200 size=20134
+H=50 => 200 size=20116
+H=80 => 200 size=20096
+H=100 => 200 size=20106
+H=150 => 200 size=20134
+H=200 => 200 size=20115
+H=250 => 200 size=20122
+H=300 => 200 size=20126
+H=350 => 200 size=20126
+H=400 => 200 size=20126
+## Boundary width with L=100 H=50
+W=20 => 400 {"statusCode":400,"message":"width-to-small","errorCode":"calc-700","additionalData":{"targetValue":25}}
+W=30 => 200 size=20106
+W=40 => 200 size=20131
+W=50 => 200 size=20094
+W=60 => 200 size=20110
+W=70 => 200 size=20122
+W=80 => 200 size=20116
+W=90 => 200 size=20129
+W=100 => 200 size=20089
+W=120 => 200 size=20128
+W=150 => 200 size=20107
+W=200 => 400 {"statusCode":400,"message":"length-2third-width","errorCode":"calc-700","additionalData":{"targetValue":null}}
+W=300 => 400 {"statusCode":400,"message":"length-2third-width","errorCode":"calc-700","additionalData":{"targetValue":null}}
+W=400 => 400 {"statusCode":400,"message":"width-to-big","errorCode":"calc-700","additionalData":{"targetValue":350}}
+W=500 => 400 {"statusCode":400,"message":"width-to-big","errorCode":"calc-700","additionalData":{"targetValue":350}}
+## length-2third-width check L vs W (h=80)
+L=50 W=100 => 400 {"statusCode":400,"message":"length-2third-width","errorCode":"calc-700","additionalData":{"targetValue":null}}
+L=66 W=100 => 200 size=20139
+L=67 W=100 => 200 size=20114
+L=70 W=100 => 200 size=20139
+L=80 W=100 => 200 size=20117
+L=100 W=80 => 200 size=20096
+L=120 W=90 => 200 size=20068
+## Fine boundaries crashlock
+L=25 W=80 H=50 => 400 {"statusCode":400,"message":"length-2third-width","errorCode":"calc-700","additionalData":{"targetValue":null}}
+L=26 W=80 H=50 => 400 {"statusCode":400,"message":"length-2third-width","errorCode":"calc-700","additionalData":{"targetValue":null}}
+L=52 W=80 H=50 => 400 {"statusCode":400,"message":"length-2third-width","errorCode":"calc-700","additionalData":{"targetValue":null}}
+L=53 W=80 H=50 => 200
+L=399 W=80 H=50 => 200
+L=400 W=80 H=50 => 200
+L=401 W=80 H=50 => 400 {"statusCode":400,"message":"length-to-big","errorCode":"calc-700","additionalData":{"targetValue":400}}
+W=25 L=100 H=50 => 200
+W=26 L=100 H=50 => 200
+W=149 L=100 H=50 => 200
+W=150 L=100 H=50 => 200
+W=200 L=100 H=50 => 400 {"statusCode":400,"message":"length-2third-width","errorCode":"calc-700","additionalData":{"targetValue":null}}
+W=349 L=100 H=50 => 400 {"statusCode":400,"message":"length-2third-width","errorCode":"calc-700","additionalData":{"targetValue":null}}
+W=350 L=100 H=50 => 400 {"statusCode":400,"message":"length-2third-width","errorCode":"calc-700","additionalData":{"targetValue":null}}
+W=351 L=100 H=50 => 400 {"statusCode":400,"message":"width-to-big","errorCode":"calc-700","additionalData":{"targetValue":350}}
+H=24 L=100 W=80 => 400 {"statusCode":400,"message":"height-to-small","errorCode":"calc-700","additionalData":{"targetValue":25}}
+H=25 L=100 W=80 => 200
+H=26 L=100 W=80 => 200
+H=399 L=100 W=80 => 200
+H=400 L=100 W=80 => 200
+H=401 L=100 W=80 => 400 {"statusCode":400,"message":"height-to-big","errorCode":"calc-700","additionalData":{"targetValue":400}}
+2third W=150 L=99 => 200
+2third W=150 L=100 => 200
+2third W=150 L=101 => 200
+## Other products sample
+mailerbox 25x80x50 => 400 {"statusCode":400,"message":"length-to-small","errorCode":"calc-700","additionalData":{"targetValue":50}}
+mailerbox 24x80x50 => 400 {"statusCode":400,"message":"length-to-small","errorCode":"calc-700","additionalData":{"targetValue":50}}
+mailerbox 500x80x50 => 200 OK
+sleeve 25x80x50 => 200 OK
+sleeve 24x80x50 => 200 OK
+sleeve 3000x2000x1000 => 200 OK
+pillowbox 25x25x25 => 400 {"statusCode":400,"message":"length-to-small","errorCode":"calc-700","additionalData":{"targetValue":30}}
+pillowbox 24x24x24 => 400 {"statusCode":400,"message":"length-to-small","errorCode":"calc-700","additionalData":{"targetValue":30}}
+tray 25x80x40 => 200 OK
+tray 24x80x40 => 200 OK

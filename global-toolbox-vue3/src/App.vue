@@ -47,6 +47,8 @@ import {
 } from './seo/toolRegistry'
 import { applyGuideMeta, applyHomeMeta, applyToolMeta } from './seo/applyPageMeta'
 import GuidePage from './pages/GuidePage.vue'
+import ShipmentsPage from './pages/ShipmentsPage.vue'
+import ShipmentDetail from './pages/ShipmentDetail.vue'
 import CbmCalculator from './tools/cbm-calculator/CbmCalculator.vue'
 import FreightComparison from './tools/freight-comparison/FreightComparison.vue'
 import SheetNesting from './tools/sheet-nesting/SheetNesting.vue'
@@ -129,6 +131,8 @@ const active = computed<ToolId | null>(() => {
 const showData = computed(() => view.value === 'shared')
 const showPricing = computed(() => view.value === 'pricing')
 const showPrivacy = computed(() => view.value === 'privacy')
+const showShipments = computed(() => view.value === 'shipments')
+const showShipmentDetail = computed(() => view.value === 'shipment-detail')
 const guideId = computed<GuideId | null>(() => {
   if (view.value !== 'guide') return null
   const id = String(route.params.guideId || '')
@@ -269,7 +273,11 @@ const onCloudImportFile = async (e: Event) => {
       .replace('{issues}', String(issueCount))
     const committed = await importCommit(preview.id, {
       name: schemeName.value || file.name,
+      target: 'scheme',
     })
+    if (!committed.scheme || !committed.cargo) {
+      throw new Error('Import did not return scheme cargo')
+    }
     setCargo(committed.cargo.map((c) => ({ ...c })))
     schemeName.value = committed.scheme.name
     activeSchemeId.value = committed.scheme.id
@@ -409,6 +417,10 @@ const openSharedData = () => {
   void router.push(`/${locale.value}/shared/`)
   mobileNav.value = false
 }
+const openShipments = () => {
+  void router.push(`/${locale.value}/shipments/`)
+  mobileNav.value = false
+}
 const openPricing = () => {
   void router.push(`/${locale.value}/pricing/`)
   mobileNav.value = false
@@ -442,6 +454,8 @@ const breadcrumbTitle = computed(() => {
   if (showPricing.value) return t('pricing')
   if (showPrivacy.value) return t('privacyTitle')
   if (showData.value) return t('shared')
+  if (showShipments.value) return t('shipmentsTitle')
+  if (showShipmentDetail.value) return t('shipmentsDetail')
   if (guideId.value) return GUIDES.find((g) => g.id === guideId.value)?.title[locale.value] || t('guides')
   return t('tools')
 })
@@ -463,6 +477,14 @@ const breadcrumbTitle = computed(() => {
       </button>
       <button class="nav-link" :class="{ selected: showData }" type="button" @click="openSharedData">
         <span>▤</span>{{ t('shared') }}
+      </button>
+      <button
+        class="nav-link"
+        :class="{ selected: showShipments || showShipmentDetail }"
+        type="button"
+        @click="openShipments"
+      >
+        <span>▣</span>{{ t('shipmentsTitle') }}
       </button>
       <div class="sidebar-caption">{{ t('categories') }}</div>
       <button
@@ -621,6 +643,24 @@ const breadcrumbTitle = computed(() => {
             </div>
             <button type="button" @click="openPricing">{{ t('pricing') }} →</button>
           </div>
+      </template>
+
+      <template v-else-if="showShipments">
+        <ShipmentsPage
+          :t="t"
+          :locale="locale"
+          :is-logged-in="isLoggedIn"
+          @request-login="showAuth = true"
+        />
+      </template>
+
+      <template v-else-if="showShipmentDetail">
+        <ShipmentDetail
+          :t="t"
+          :locale="locale"
+          :is-logged-in="isLoggedIn"
+          @request-login="showAuth = true"
+        />
       </template>
 
       <template v-else-if="showPrivacy">

@@ -1,0 +1,25 @@
+HTTP/1.1 200 OK
+Date: Tue, 10 Nov 2026 07:03:35 GMT
+Content-Type: image/svg+xml
+Transfer-Encoding: chunked
+Connection: keep-alive
+CF-Ray: a58332c07956e399-NRT
+CF-Cache-Status: MISS
+Cache-Control: max-age=14400
+x-cache: Miss from cloudfront
+ETag: W/"0912b5953c8d6f7e9b368cf619b0956c"
+Last-Modified: Wed, 22 Apr 2026 13:47:26 GMT
+Server: cloudflare
+Vary: Accept-Encoding
+Via: 1.1 3f53c5d558c7725105f3837916f8e5c2.cloudfront.net (CloudFront)
+Nel: {"report_to":"cf-nel","success_fraction":0.0,"max_age":604800}
+Report-To: {"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=tbCBkoQabf1aVgOLEQscl4M5TVFxDD5e9tbTb1tRUf44eP9VwYpAOAN%2BiajTJ0N7NdiPe9Ebb59FKpUdc2vHZtKfrms3qqhX2VsCNPTPZAD1vnkZpcrV7HPtfiDSj0aYX86%2BxMamIpH52A%3D%3D"}]}
+x-amz-cf-id: r9sxbhW8rxRUYeVP7-QVpXXDfdDqqf0250iuUey9-8E75hsSj1OwUw==
+x-amz-cf-pop: NRT12-P8
+x-amz-meta-height: 80
+x-amz-meta-length: 100
+x-amz-meta-product: productbox-crashlock
+x-amz-meta-timestamp: 2026-04-22T13:47:25.093Z
+x-amz-meta-width: 80
+x-amz-server-side-encryption: AES256
+

@@ -8,6 +8,13 @@ from django.utils import timezone
 from .models import Scheme, SchemeRevision, hash_cargo_meta
 
 
+class SchemeVersionConflict(Exception):
+    def __init__(self, *, expected: int, current: int):
+        self.expected = expected
+        self.current = current
+        super().__init__(f"expected={expected} current={current}")
+
+
 @transaction.atomic
 def create_scheme(
     *,
@@ -49,8 +56,14 @@ def append_revision(
     locale: str | None = None,
     cargo: list,
     meta: dict | None = None,
+    expected_row_version: int | None = None,
 ) -> Scheme:
     scheme = Scheme.objects.select_for_update().get(pk=scheme.pk)
+    if expected_row_version is not None and expected_row_version != scheme.row_version:
+        raise SchemeVersionConflict(
+            expected=expected_row_version,
+            current=scheme.row_version,
+        )
     next_no = (scheme.current_revision.revision_no if scheme.current_revision_id else 0) + 1
     if scheme.current_revision_id:
         # Prefer max revision_no in case of restore races
@@ -93,6 +106,7 @@ def restore_revision(*, scheme: Scheme, user, revision_no: int) -> Scheme:
         locale=scheme.locale,
         cargo=list(source.cargo_json),
         meta=dict(source.meta_json or {}),
+        expected_row_version=None,
     )
 
 

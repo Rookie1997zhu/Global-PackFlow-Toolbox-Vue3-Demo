@@ -1,0 +1,61 @@
+AI mode: 메인 영역 디자인 (+ regen via re-generate) — 2026-11-10 KO store session
+
+Precondition
+- designId=46bfa110-18d3-4e6b-8ccb-f045268922dd
+- AI combobox options observed: 이미지 생성 | 메인 영역 디자인
+- Screenshot UI: phase3-ai-main-area-ui.png
+
+UI deltas vs 이미지 생성
+- Combobox label → 메인 영역 디자인
+- Section 메인 디자인 영역: mini dieline with main panel highlighted
+- 스타일 (Flat Illustration kept)
+- 프롬프트
+- 색상 (배경이 선택되지 않음) — optional; generation succeeded with null background
+- Gallery title 생성된 디자인 (not 생성된 이미지)
+- No aspect-ratio 1:1 control in this mode
+
+Run 1 — neutral prompt
+- Prompt: soft geometric leaf pattern, muted sage and cream, packaging-safe flat illustration, no text, no logo
+- Button: 생성 → 생성중... → 생성
+
+Network (redacted)
+1) POST studio-api.packative.com/v1/llm/prompt → 200
+   Body keys: designTheme  (≠ image-mode freeform fields)
+   Response: rewritten style string
+2) POST studio-api.packative.com/v1/editor/main-design-gen → 200
+   Body keys: prompt, main_pixel, dieline_url, total_mask_url, area_mask_url, user_id, uuid, design_id
+   Notes:
+   - main_pixel: null (this pass)
+   - dieline_url → .../dielines/productbox-crashlock/100_80_80/dieline.png
+   - total_mask_url → .../total_mask.png
+   - area_mask_url → .../area_mask.png
+   - NOT /v1/editor/create (image mode)
+   Response: {status:success, files:[.../generated-images/{cus}/{uuid}/print/image_0.png], client_id}
+3) POST /v1/editor/work-history → 200
+   Body keys: designId, imageUrl, generationInfo, tool
+   tool: "design"
+   generationInfo keys: originalPrompt, enhancedPrompt, style, backgroundColorHex
+4) GET /v1/editor/generated-images?designId=... → lists tool:"design" entry (image mode uses tool:"image")
+
+Apply
+- Clicking print/image_0 thumbnail places full-bleed Konva Image ~2048×1216 on stage (with prior stickers + dieline-overlay)
+- Screenshots: phase3-ai-main-area-result.png; phase3-ai-main-area-gallery.png; phase3-ai-main-area-on-dieline.png
+- Konva path sample: .../393b736b-.../print/image_0.png (run 2) / a4fefd9a-.../print/image_0.png (run 1)
+
+Regen
+- No dedicated per-thumbnail 「재생성」 control found in gallery hover
+- Second pass = change prompt + click 생성 again (same main-design-gen pipeline)
+- Run 2 prompt prefix: "regenerate variant: ... denser tiling ..."
+- Same endpoints; new client uuid 393b736b-ea94-4dfa-9d32-10c6cd54bb2b; gallery shows 2 thumbs
+- Screenshot: phase3-ai-main-area-applied.png
+
+Contrast vs 이미지 생성 (phase1-studio-ai-apis.txt)
+| | 이미지 생성 | 메인 영역 디자인 |
+|---|---|---|
+| llm body | (style+prompt rewrite) | designTheme |
+| gen endpoint | /v1/editor/create | /v1/editor/main-design-gen |
+| masks | typically absent | dieline + total_mask + area_mask |
+| CDN path | .../{designId}/{uuid}/image.webp | .../{uuid}/print/image_0.png |
+| work-history tool | image | design |
+
+Verdict: Passed (main-area gen + apply + re-generate via 생성). Thumbnail-local regen control: Not Found / Partial.

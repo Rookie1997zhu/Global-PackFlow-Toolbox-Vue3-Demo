@@ -21,6 +21,7 @@ import {
 } from './usePacking'
 import { isLoggedIn } from '../../shared/auth/session'
 import { cloudGenerateReport, ensureSchemeId } from '../../shared/reports/cloudReport'
+import { buildConfirmedReportBody } from '../../shared/reports/confirmedReportBody'
 import type { ReportFormat } from '../../api/reports'
 
 const props = defineProps<{ t: (key: string) => string }>()
@@ -131,16 +132,22 @@ const cloudExport = async (format: ReportFormat) => {
       cargo: cargo.value,
       locale: hostLocale.value,
     })
-    await cloudGenerateReport({
-      kind: 'packing_list',
-      format,
-      locale: hostLocale.value,
-      schemeId,
-      shipper: shipper.value,
-      consignee: consignee.value,
-      po: po.value,
-      title: props.t('packingList'),
-    })
+    await cloudGenerateReport(
+      buildConfirmedReportBody({
+        kind: 'packing_list',
+        format,
+        locale: hostLocale.value,
+        schemeId,
+        lines: lines.value.map(({ id: _id, needsReview: _nr, ...row }) => row),
+        formal: false,
+        meta: {
+          shipper: shipper.value,
+          consignee: consignee.value,
+          po: po.value,
+          title: props.t('packingList'),
+        },
+      }),
+    )
     cloudMsg.value = props.t('cloudReportDone')
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)

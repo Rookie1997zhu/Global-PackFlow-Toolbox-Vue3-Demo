@@ -25,6 +25,7 @@ import {
 import { isLoggedIn } from '../../shared/auth/session'
 import { createCalculationJob, pollCalculationResult } from '../../api/calculations'
 import { ensureSchemeId } from '../../shared/reports/cloudReport'
+import { buildCloudVerifyCargoRows, buildCloudVerifyParams } from './cloudVerifyCargo'
 
 const props = defineProps<{
   t: (key: string) => string
@@ -135,27 +136,19 @@ const cloudVerify = async () => {
   cloudBusy.value = true
   serverVerified.value = false
   try {
-    const cargoRows = skus.value.map((s) => ({
-      sku: s.name,
-      length: s.length / 10,
-      width: s.width / 10,
-      height: s.height / 10,
-      weight: s.weight,
-      qty: s.qty,
-      price: 0,
-    }))
+    const cargoRows = buildCloudVerifyCargoRows(skus.value, cargo.value)
     setCargo(cargoRows)
     const schemeId = await ensureSchemeId({
       name: `Container ${presetId.value}`,
       cargo: cargoRows,
       locale: hostLocale.value,
     })
+    const baseParams = buildCloudVerifyParams(skus.value, presetId.value)
     const job = await createCalculationJob({
       schemeId,
       idempotencyKey: `container-${schemeId}-${presetId.value}-${Date.now()}`,
       params: {
-        containerPreset: presetId.value,
-        allowRotate: skus.value.every((s) => s.allowRotate),
+        ...baseParams,
         custom:
           presetId.value === 'custom'
             ? {

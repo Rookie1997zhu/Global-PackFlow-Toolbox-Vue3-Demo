@@ -1,0 +1,26 @@
+HTTP/1.1 200 OK
+Date: Tue, 10 Nov 2026 06:20:30 GMT
+Content-Type: application/pdf
+Transfer-Encoding: chunked
+Connection: keep-alive
+CF-Ray: a582f3a14e5d38cd-NRT
+CF-Cache-Status: DYNAMIC
+Access-Control-Allow-Origin: *
+Age: 22
+Content-Disposition: attachment; filename="%ED%8C%A8%EC%BB%A4%ED%8B%B0%EB%B8%8C-%EB%8B%A8%EC%83%81%EC%9E%90%203%EB%A9%B4%EC%A0%91%EC%B0%A9-100mm-80mm-50mm.pdf"
+x-powered-by: Express
+Server: cloudflare
+Vary: Origin, accept-encoding
+Via: 1.1 99057e6beab36f509efb35703e98fcf4.cloudfront.net (CloudFront), 1.1 1a32d5b63476b853ffc0505ea6996c7a.cloudfront.net (CloudFront)
+Nel: {"report_to":"cf-nel","success_fraction":0.0,"max_age":604800}
+Report-To: {"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=%2B4CYOwT8qjiOTmBsK2rFmtss38WC7HXmlHo9Ibt5pFxFFMKjn57SHBDy%2FIP1NTYnbBw3eTTGy80a4ui8ydyF%2BWlAlheDyH4tLMT7bTb7pgjtk3Jjd5Cf%2FZjv0GEfol7ZFA%2BSZw%3D%3D"}]}
+X-Amz-Cf-Id: 947BYaEAIDjjnY3ZqZXyE_lOsIwfQL3gc-1CPfef6fJz9z7tftlf6Q==
+X-Amz-Cf-Pop: NRT12-P8
+X-Amz-Cf-Pop: NRT57-P2
+X-Amzn-Trace-Id: Root=1-6af2b798-0d0c1fec7c2bacad7c3045e7;Parent=6a2b13a36cbc9068;Sampled=0;Lineage=1:99677f93:0
+X-Cache: Hit from cloudfront
+access-control-allow-credentials: true
+x-amz-apigw-id: GnGf2E76oE0EOqg=
+x-amzn-Remapped-content-length: 2111
+x-amzn-RequestId: 91c32dea-2215-4a38-b4f3-d70a8e4f5a33
+

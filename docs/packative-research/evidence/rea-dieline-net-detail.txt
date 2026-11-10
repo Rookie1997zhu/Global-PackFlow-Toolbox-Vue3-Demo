@@ -1,0 +1,22 @@
+events=325
+keys0=['sequence', 'step_index', 'transaction_id', 'redirected_from_transaction_id', 'redirected_from_transaction_state', 'method', 'url', 'resource_type', 'header_names', 'kind', 'status', 'failure']
+{"sequence": 1, "step_index": 0, "transaction_id": "request-1", "redirected_from_transaction_id": null, "redirected_from_transaction_state": "root", "method": "GET", "url": {"url": "https://packative.com/en/products/productbox-crashlock", "origin": "https://packative.com", "query_parameter_names": [], "redacted": false}, "resource_type": "document", "header_names": ["accept-language", "sec-ch-ua", "sec-ch-ua-mobile", "sec-ch-ua-platform", "upgrade-insecure-requests", "user-agent"], "kind": "request", "status": null, "failure": null}
+hosts:
+   161 packative.com
+   140 packative-global-production.dominik-99e.worker
+   126 a.
+    48 cdn-cookieye
+    19 a
+    18 u
+     6 log.cookieye
+     6 papi.packative.com
+     2 react.dev
+apiish:
+  https://papi.packative.com
+  https://papi.packative.com/public/online/price
+steps:
+  0 scenario_start -> https://packative.com/en/products/productbox-crashlock
+  1 accept_cookies -> https://packative.com/en/products/productbox-crashlock
+  2 wait1 -> https://packative.com/en/products/productbox-crashlock
+  3 click_dieline -> https://packative.com/en/products/productbox-crashlock
+  4 wait_gen -> https://packative.com/en/products/productbox-crashlock

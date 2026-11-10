@@ -1,0 +1,107 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>PackFlow V1.3.1 本地源码 AI 开发提示词</title><style>
+:root{color-scheme:light}*{box-sizing:border-box}body{margin:0;background:#f4f6fa;color:#16243b;font:15px/1.8 system-ui,-apple-system,"Microsoft YaHei",sans-serif}header{background:#0e2849;color:#fff;padding:52px max(24px,calc((100vw - 1080px)/2)) 38px}header small{color:#8dd8f2;letter-spacing:.12em}h1{font-size:clamp(24px,4vw,40px);margin:12px 0}header p{max-width:800px;color:#d1dbe8}main{max-width:1110px;padding:28px 20px 60px;margin:auto}.notice{border:1px solid #c8d9ef;background:#eaf4ff;border-radius:12px;padding:14px 20px;margin-bottom:20px}.top{display:flex;justify-content:space-between;gap:14px;align-items:center;flex-wrap:wrap;margin:20px 0}button{font:inherit;background:#096f9c;border:0;color:white;border-radius:8px;padding:10px 20px;cursor:pointer;font-weight:700}button:hover{background:#075776}pre{background:#fff;color:#193049;border:1px solid #e0e7f1;border-radius:14px;padding:24px;white-space:pre-wrap;overflow-wrap:anywhere;font:13.5px/1.85 ui-monospace,"Cascadia Code","Microsoft YaHei",monospace;box-shadow:0 8px 34px #11264b0b}.footer{margin:18px 0;color:#5f6f86;font-size:13px}@media(max-width:600px){header{padding:30px 20px}main{padding:18px 14px}pre{padding:16px;font-size:12px}}</style></head><body><header><small>PACKFLOW · DEVELOPMENT AGENT</small><h1>V1.3.1 本地源码 AI 开发提示词</h1><p>可直接打开本页面并复制完整指令给 Cursor / Claude Code。此版本明确要求在当前本地工作区修改已有代码，不拉取或克隆 GitHub。</p></header><main><div class="notice"><b>强制规则：</b>使用本地现有源码；禁止 clone / pull / fetch / push；先保护未提交改动，再逐项执行 V1.3.1 修复。</div><div class="top"><strong>完整开发指令 · 可直接复制</strong><button id="copy" type="button">复制全文</button></div><pre id="prompt"># PackFlow V1.3.1 AI 开发提示词（本地源码版）
+
+&gt; 使用场景：在 Cursor、Claude Code 或其他能访问本地工作区的开发 AI 中打开**已经存在的 PackFlow 项目根目录**，然后粘贴本提示词。
+&gt;
+&gt; **重要前提：本机已经有完整源码。严禁重新 clone、git pull、git fetch 或从 GitHub 下载/替换项目。** 只使用当前打开的本地工作区作为代码和数据的事实来源。
+
+## 第一轮：只执行 V1.3.1 数据正确性与可靠性
+
+你是 PackFlow 项目的全栈开发工程师，同时承担代码审查、QA 和交付责任。**直接在我当前打开的本地 PackFlow 工作区修改现有源码、完善测试，并给出可验证结果**；不要重新生成项目，也不要只提交方案、空壳页面或假 API。
+
+### 0. 工作区与代码保护（必须先执行）
+
+1. 从当前工作区识别本地项目根目录；若编辑器打开的是子目录，则按 `README.md`、`backend/`、`global-toolbox-vue3/`、`engine-ts/`、`deploy/compose.yml` 等特征查找本地根目录，**不通过网络获取代码**。
+2. 在本地执行只读检查：`pwd`、`git status --short`、`git log -1 --oneline`、`git diff --stat`，确认未提交的修改、当前分支和实际代码状态。**不要执行 `git reset --hard`、`git clean -fd`、覆盖式检出等破坏性命令**。
+3. 当前本地 HEAD 可能领先于方案编写时的参考提交 `cdbcedf6cede681f333c080135885eb7fc5bb3f4`。该 SHA **只用于说明方案来源**，不代表要求切换、回退或同步版本。以**本地实际代码**为准，已有功能先检查再决定是否修改。
+4. 不克隆、不拉取、不抓取、不推送 GitHub；不创建额外的项目副本。没有明确授权，不上传源码、业务数据、凭据、`.env` 或数据库备份到外部服务。
+5. 若本地已有同一问题的修复或功能，优先验证，不要重复实现；若方案与实际代码冲突，以本地现有数据结构、API 兼容和测试证据为依据作最小调整。
+
+### 1. 先读本地文件并定位调用链
+
+阅读本地 `README.md`、`deploy/compose.yml`、`backend/config/settings/`、前端 API 封装、Scheme/Revision 模型、报告模块、TS 装柜引擎及现有测试。阅读同一个本地工作区内的《PackFlow V1.3.1–V1.6 功能增强详细开发方案》HTML 文件，结合实际源码确认所列任务是否尚未完成。
+
+重点定位以下路径（如本地已有重构，按符号搜索）：
+
+- `backend/apps/documents/builders.py`、`services.py`：Packing List / Commercial Invoice 的数据来源、数量、重量、币种。
+- `global-toolbox-vue3/src/tools/packing-list/`、`commercial-invoice/`：用户编辑后的单据明细与云端导出。
+- `global-toolbox-vue3/src/tools/container-loading/ContainerLoading.vue`：云端验证是否修改共享 Cargo、SKU 装载条件是否完整。
+- `backend/apps/schemes/views.py`、`services.py`：`rowVersion` 并发更新；修复时保证版本比较与写入处于同一受保护事务。
+- `backend/apps/imports/parsing.py`：韩语 CP949 CSV 的解码回退。
+- `backend/apps/calculations/`：月度配额、幂等、任务取消和计算输入快照。
+- `backend/apps/documents/renderers/`：PDF/XLSX 内容一致性、公式注入与韩文字体。
+
+### 2. 按依赖执行任务（当前一轮只做 V1.3.1）
+
+**PF-001 — 货物数据语义与装箱数量：** 明确商品件数 `pieceQty`、每箱装量 `piecesPerCarton`、箱数 `cartonCount`、单箱毛重与净重的语义和单位。兼容旧版 `CargoScheme v1`；**旧 `qty` 含义不明确时不得自动推断为 PCS 或 CTN**。用测试验证：120 PCS / 12 PCS 每箱 = 10 CTN。净重未知时不得用毛重 × 0.92 生成正式数据，应要求录入或明确标记未确认。
+
+**PF-002 — PL/CI 云端报表：** 用户在页面上实际编辑并确认的 Packing List 和 Commercial Invoice 明细必须进入后端 `DocumentSnapshot`，并由同一快照生成 PDF/XLSX。不得只根据原始 `cargo` 重建数据导致页面、PDF、Excel 不一致。保留单据来源、方案版本、模板版本和用户可追溯信息。
+
+**PF-003 — 云端装柜验证：** 计算不应把共享 `Cargo.price` 清零或产生其他副作用。必须完整保留并验证每一 SKU 的 `allowRotate`、`stackable` 等已有装载约束；服务端生成可信结果、记录算法版本、输入 hash，并检查前后端结果契约兼容。实际装载方案仅为启发式估算，不宣称运输安全认证。
+
+**PF-004 — 并发保存：** Scheme `rowVersion` 必须在行锁或数据库原子条件更新的保护之内判断。两名成员同时以相同旧版本保存时，只有一个成功，另一方稳定收到 409 `SCHEME_VERSION_CONFLICT`；添加数据库并发测试。
+
+**相关修复（同轮只处理与上述主路径直接相关的）：** CP949 解码、按自然月统计计算额度、同幂等键不同请求负载的冲突、Excel 公式注入、计算任务取消竞态、文件导入边界值及团队权限。不要为了追求任务数量夹带与 V1.3.1 无关的架构重构。
+
+### 3. 强制开发原则
+
+- 保留本地既有 **Vue 3 + TypeScript / Django DRF / PostgreSQL / Redis + Celery / Node TypeScript Engine / Docker Compose + Caddy** 架构。
+- 保留单个 Compose 管理现有服务；不得擅自把 Caddy 改成 Nginx、暴露 Postgres/Redis/引擎端口或重构为另一个部署平台。
+- 向后兼容已有 API 和 `CargoScheme v1`；若需要字段扩展，必须先写兼容与迁移策略，生成并测试必要的 Django migration。不得删除旧方案、重置或清空数据库。
+- 所有服务端资源按 Team 进行真实授权，Viewer/Editor/Admin/Owner 角色按既有权限模型执行；绝不能只依赖前端权限。
+- 金额、币种、计价单位必须明确，货币计算用 `Decimal` 或等价精度策略，不把不同币种直接比较。
+- 对完整业务流程实现 Loading、Empty、Validation Error、Conflict、Success 状态；复用现有韩/英/中 i18n。
+- 必须先以失败测试或可重现样例证明问题，再做最小修复，最后补充回归测试。
+- 当需求中某项业务规则无法从现有代码确定（如 `qty` 的业务含义），不要编造默认值；采取安全的未确认状态并在交付记录中列出待决策事项。
+
+### 4. 验证与交付
+
+在本地环境可用的前提下执行：
+
+```bash
+# 前端（从项目根目录进入现有前端文件夹）
+cd global-toolbox-vue3
+npm test -- --run
+npm run build
+
+# 后端（返回项目根目录并进入 backend）
+cd ../backend
+python manage.py test tests
+
+# TypeScript 算法（返回根目录并进入 engine-ts）
+cd ../engine-ts
+npm test
+
+# Compose 验证（返回项目根目录）
+cd ..
+docker compose -f deploy/compose.yml --env-file .env config
+# 若本地 Docker/数据库可用，并确认不会触及重要运行数据，再执行适当的构建、健康检查与集成测试。
+```
+
+以上仅是参考命令，必须先识别本地环境、已有依赖和运行配置；测试命令失败不可静默忽略。对数据迁移、生产 Compose 更新、备份/恢复和任何可能影响现有数据的操作，先保护数据并确认影响。若本地缺少 Docker、PostgreSQL 或依赖，则继续完成可运行的测试，并把不可验证项标为 **Blocked/Not Run**，不能写成 Passed。
+
+交付时给出：
+
+1. 实际修改的本地文件、关键差异和原因；
+2. API、数据库迁移、旧数据兼容与回滚说明；
+3. PF-001～PF-004 各自的业务输入/预期输出/实际输出与测试证据；
+4. 所有测试的真实 Passed / Failed / Blocked / Not Run 状态；
+5. 未完成项、仍有的风险、待我确认的业务规则；
+6. 下一轮建议任务（只列出，**不提前开发 V1.3.2～V1.6**）。
+
+本次默认**只修改本地源码和本地测试文件**；可以按需要创建本地 Git commit，但**不自动 push、不 pull、不 fetch，也不创建远程 PR**。如本地工作区存在用户未提交的改动，必须保留并避免覆盖。
+
+---
+
+# 后续轮次通用总控指令（请在我明确要求开始后使用）
+
+本地源码已就绪，禁止重新获取 GitHub 仓库。每次只执行 HTML 方案中当前获授权的一个阶段或一小组 PF 任务：先审查本地状态 → 确认依赖 → 实现完整前后端和数据链路 → 加测试 → 本地验证 → 汇报修改和风险。阶段顺序建议：
+
+1. V1.3.1：数据正确性与可靠性；
+2. V1.3.2：出货工作台 Shipment，统一项目、货物、箱数、单据、历史版本；
+3. V1.4：智能纸箱包装方案（Cartonization）；
+4. V1.5：卡板/集装箱联动与方案 A/B 对比；
+5. V1.6：批量箱唛、扫码核对与异常记录。
+
+必须复用现有模块，防止重复计算和数据含义冲突。每轮完工都要提供真实测试证据，不能把 UI 完成、接口返回 200、或能下载文件，直接等同于业务正确。
+</pre><p class="footer">本提示词配合《PackFlow V1.3.1–V1.6 详细实施方案 HTML》使用。后续版本以本地实际源码为准。</p></main><script>document.getElementById('copy').addEventListener('click',async()=>{const v=document.getElementById('prompt').textContent;try{await navigator.clipboard.writeText(v);document.getElementById('copy').textContent='已复制';}catch(e){const s=window.getSelection(),r=document.createRange();r.selectNodeContents(document.getElementById('prompt'));s.removeAllRanges();s.addRange(r);document.getElementById('copy').textContent='已选中，请按 Ctrl+C';}});</script></body></html>

@@ -1,0 +1,49 @@
+{
+  "original_dieline": {
+    "type": "omitted_base64_or_long_str",
+    "len": 34168,
+    "prefix": "iVBORw0KGgoAAAANSUhEUgAABX8AAANC"
+  },
+  "dieline": {
+    "type": "omitted_base64_or_long_str",
+    "len": 386472,
+    "prefix": "iVBORw0KGgoAAAANSUhEUgAACAAAAATA"
+  },
+  "area_mask": {
+    "type": "omitted_base64_or_long_str",
+    "len": 18412,
+    "prefix": "iVBORw0KGgoAAAANSUhEUgAACAAAAATA"
+  },
+  "main_mask": {
+    "type": "omitted_base64_or_long_str",
+    "len": 17076,
+    "prefix": "iVBORw0KGgoAAAANSUhEUgAACAAAAATA"
+  },
+  "total_mask": {
+    "type": "omitted_base64_or_long_str",
+    "len": 39584,
+    "prefix": "iVBORw0KGgoAAAANSUhEUgAACAAAAATA"
+  },
+  "original_dieline_url": "https://studio-cdn.packative.com/ee4e06e4-c9b7-410f-b600-175fb1212729/dielines/productbox-crashlock/100_80_80/original_dieline.png",
+  "dieline_url": "https://studio-cdn.packative.com/ee4e06e4-c9b7-410f-b600-175fb1212729/dielines/productbox-crashlock/100_80_80/dieline.png",
+  "area_mask_url": "https://studio-cdn.packative.com/ee4e06e4-c9b7-410f-b600-175fb1212729/dielines/productbox-crashlock/100_80_80/area_mask.png",
+  "main_mask_url": "https://studio-cdn.packative.com/ee4e06e4-c9b7-410f-b600-175fb1212729/dielines/productbox-crashlock/100_80_80/main_mask.png",
+  "total_mask_url": "https://studio-cdn.packative.com/ee4e06e4-c9b7-410f-b600-175fb1212729/dielines/productbox-crashlock/100_80_80/total_mask.png",
+  "original_svg_url": "https://studio-cdn.packative.com/ee4e06e4-c9b7-410f-b600-175fb1212729/dielines/productbox-crashlock/100_80_80/dieline.svg",
+  "original_width": 1407,
+  "original_height": 834,
+  "canvas_width": 2048,
+  "canvas_height": 1216,
+  "bbox_length": "220.71",
+  "bbox_width": "372.21",
+  "image_width": 1407,
+  "image_height": 834,
+  "papi_code": "productbox-crashlock",
+  "length": 100,
+  "width": 80,
+  "height": 80,
+  "db_id": "1849",
+  "evd_uuid": "6722376a-a523-42dc-95ab-5f5239c23b5f",
+  "version": 4,
+  "timestamp": "2026-04-22T13:47:27.360Z"
+}

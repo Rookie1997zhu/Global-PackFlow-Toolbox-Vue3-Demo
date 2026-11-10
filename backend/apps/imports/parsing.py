@@ -8,12 +8,17 @@ from typing import Any
 
 
 def parse_csv_bytes(data: bytes) -> list[list[str]]:
-    text = data.decode("utf-8-sig")
-    try:
-        return _parse_csv_text(text)
-    except UnicodeDecodeError:
-        text = data.decode("cp949")
-        return _parse_csv_text(text)
+    last_err: Exception | None = None
+    for encoding in ("utf-8-sig", "cp949", "utf-8"):
+        try:
+            text = data.decode(encoding)
+            return _parse_csv_text(text)
+        except UnicodeDecodeError as exc:
+            last_err = exc
+            continue
+    if last_err:
+        raise last_err
+    return _parse_csv_text(data.decode("utf-8", errors="replace"))
 
 
 def _parse_csv_text(text: str) -> list[list[str]]:
@@ -22,12 +27,27 @@ def _parse_csv_text(text: str) -> list[list[str]]:
     return [r for r in rows if any(str(c).strip() != "" for c in r)]
 
 
-def parse_xlsx_bytes(data: bytes) -> list[list[str]]:
+def list_xlsx_sheets(data: bytes) -> list[dict[str, Any]]:
     from openpyxl import load_workbook
 
     wb = load_workbook(filename=io.BytesIO(data), read_only=True, data_only=True)
     try:
-        ws = wb.worksheets[0]
+        return [{"index": i, "name": str(ws.title)} for i, ws in enumerate(wb.worksheets)]
+    finally:
+        wb.close()
+
+
+def parse_xlsx_bytes(data: bytes, sheet_index: int = 0) -> list[list[str]]:
+    from openpyxl import load_workbook
+
+    wb = load_workbook(filename=io.BytesIO(data), read_only=True, data_only=True)
+    try:
+        if not wb.worksheets:
+            return []
+        idx = int(sheet_index or 0)
+        if idx < 0 or idx >= len(wb.worksheets):
+            raise ValueError(f"INVALID_SHEET_INDEX:{idx}")
+        ws = wb.worksheets[idx]
         rows: list[list[str]] = []
         for row in ws.iter_rows(values_only=True):
             cells = ["" if c is None else str(c) for c in row]
@@ -38,16 +58,12 @@ def parse_xlsx_bytes(data: bytes) -> list[list[str]]:
         wb.close()
 
 
-def load_table(filename: str, data: bytes) -> list[list[str]]:
+def load_table(filename: str, data: bytes, sheet_index: int | None = None) -> list[list[str]]:
     lower = filename.lower()
     if lower.endswith(".xlsx"):
-        return parse_xlsx_bytes(data)
+        return parse_xlsx_bytes(data, sheet_index=0 if sheet_index is None else int(sheet_index))
     if lower.endswith(".csv"):
-        try:
-            return parse_csv_bytes(data)
-        except UnicodeDecodeError:
-            # Fallback already in parse_csv_bytes; re-raise as format issue
-            raise
+        return parse_csv_bytes(data)
     raise ValueError("UNSUPPORTED_FORMAT")
 
 

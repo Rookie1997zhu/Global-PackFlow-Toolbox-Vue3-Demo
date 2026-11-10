@@ -48,6 +48,20 @@ class ImportBatch(models.Model):
         blank=True,
         related_name="import_results",
     )
+    target_shipment = models.ForeignKey(
+        "shipments.Shipment",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="import_targets",
+    )
+    result_shipment = models.ForeignKey(
+        "shipments.Shipment",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="import_results",
+    )
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -67,3 +81,37 @@ class ImportBatch(models.Model):
 
     def __str__(self) -> str:
         return f"{self.id}:{self.status}"
+
+
+class MappingTemplate(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    team = models.ForeignKey(
+        "organizations.Team",
+        on_delete=models.CASCADE,
+        related_name="mapping_templates",
+    )
+    name = models.CharField(max_length=200)
+    mapping_json = models.JSONField(default=dict)
+    sheet_hint = models.CharField(max_length=120, blank=True, default="")
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="mapping_templates_created",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-updated_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["team", "name"],
+                name="uniq_team_mapping_template_name",
+            )
+        ]
+        indexes = [models.Index(fields=["team", "-updated_at"])]
+
+    def __str__(self) -> str:
+        return f"{self.id}:{self.name}"

@@ -1,0 +1,16 @@
+﻿EN dieline model API (verified 2026-11-10)
+GET https://papi.packative.com/public/online/model
+  ?productCode=productbox-crashlock&length={mm}&width={mm}&height={mm}&format=eps
+Headers: Content-Type application/x-eps; Express; CloudFront; Access-Control-Allow-Origin: *
+Filename example (URL-decoded): 패커티브-단상자 3면접착-100mm-80mm-50mm.eps
+EPS creator: poppler pdftops 24.08.0; PDF Creator: packative.com  => PDF-first then EPS convert
+
+BoundingBox (pt):
+  100x80x50 -> 1119 x 626
+  120x90x60 -> 1289 x 696   (dW=+170, dH=+70)
+  55x55x75  -> 722 x 590
+
+format!=eps (ai/pdf/svg/dxf/zip/png) returned small application/pdf ~2111B (not usable dieline in this probe)
+
+EN PDP: no Easy Design / Studio radio (DOM ids missing). Studio nav -> /en/studio marketing + Request a Demo only.
+EN Dieline download works while logged-in with customer=null (unlike KO login wall in prior session).

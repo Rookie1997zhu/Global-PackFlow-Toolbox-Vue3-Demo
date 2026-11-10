@@ -1,0 +1,27 @@
+{
+  "id": "fx-kr-120pcs-10ctn",
+  "description": "Synthetic golden: 120 PCS / 12 PCS per carton = 10 CTN; NW must be user-confirmed",
+  "confirmed": {
+    "pieceQty": 120,
+    "piecesPerCarton": 12,
+    "cartonCount": 10,
+    "lastCartonQty": 12,
+    "grossKgPerCarton": 7.5,
+    "netKgPerCarton": null,
+    "currency": "USD",
+    "unitPrice": 12.5
+  },
+  "expectedPackingTotals": {
+    "cartonCount": 10,
+    "totalQty": 120,
+    "grossKg": 75.0
+  },
+  "expectedInvoice": {
+    "qty": 120,
+    "unit": "PCS"
+  },
+  "rules": {
+    "mustNotFabricateNetFromGrossFactor": 0.92,
+    "legacyQtyWithoutBasis": "needsReview"
+  }
+}

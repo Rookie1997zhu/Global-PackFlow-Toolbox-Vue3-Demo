@@ -24,6 +24,20 @@ from .tasks import run_calculation_job
 DEFAULT_MONTHLY_QUOTA = 100
 
 
+class IdempotencyKeyReuse(Exception):
+    """Same Idempotency-Key reused with a different request payload."""
+
+    def __init__(self, *, existing_job_id: str, input_hash: str):
+        self.existing_job_id = existing_job_id
+        self.input_hash = input_hash
+        super().__init__(existing_job_id)
+
+
+def _month_start():
+    now = timezone.now()
+    return now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+
 def _get_revision(scheme_id: str, revision_no: int | None, team_id):
     scheme = (
         Scheme.objects.select_related("current_revision", "team")
@@ -55,24 +69,34 @@ def create_job(
     if not key:
         raise ValidationError({"Idempotency-Key": ["Required"]})
 
+    scheme, rev = _get_revision(scheme_id, revision_no, team.id)
+    norm = normalize_params(params)
+    payload = build_engine_payload(list(rev.cargo_json or []), norm)
+    digest = input_hash(payload)
+
     existing = (
         CalculationJob.objects.select_for_update()
         .filter(team=team, idempotency_key=key)
         .first()
     )
     if existing is not None:
+        if existing.input_hash != digest:
+            raise IdempotencyKeyReuse(
+                existing_job_id=str(existing.id),
+                input_hash=existing.input_hash,
+            )
         return existing
 
-    scheme, rev = _get_revision(scheme_id, revision_no, team.id)
-    norm = normalize_params(params)
-    payload = build_engine_payload(list(rev.cargo_json or []), norm)
-    digest = input_hash(payload)
-
+    month_start = _month_start()
     settled = UsageReservation.objects.filter(
-        team=team, status=ReservationStatus.SETTLED
+        team=team,
+        status=ReservationStatus.SETTLED,
+        created_at__gte=month_start,
     ).count()
     pending = UsageReservation.objects.filter(
-        team=team, status=ReservationStatus.PENDING
+        team=team,
+        status=ReservationStatus.PENDING,
+        created_at__gte=month_start,
     ).count()
     if settled + pending >= DEFAULT_MONTHLY_QUOTA:
         raise ValidationError({"usage": ["Monthly calculation quota exceeded"]})

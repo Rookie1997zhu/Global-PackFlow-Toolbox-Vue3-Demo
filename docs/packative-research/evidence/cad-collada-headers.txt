@@ -1,0 +1,17 @@
+HTTP/1.1 403 Forbidden
+Date: Tue, 10 Nov 2026 07:03:36 GMT
+Content-Type: application/json
+Content-Length: 46
+Connection: keep-alive
+CF-Ray: a58332c62e23d750-NRT
+CF-Cache-Status: DYNAMIC
+Access-Control-Allow-Origin: *
+Server: cloudflare
+Nel: {"report_to":"cf-nel","success_fraction":0.0,"max_age":604800}
+Report-To: {"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=CxN629IfyfukmnDNdtTDCTvN7xVWC4bHveeRJJ%2FxwfhRZasVSOU5peptBX2S6e%2F6Tv4gMmyjIsC5DWLOUv1KwNCWrqXb8BG7uBOMJDVv2eoAS82X6ugOZlE6E7yLf4taAk5N"}]}
+access-control-allow-credentials: true
+access-control-allow-headers: *
+access-control-allow-headers: Authorization
+access-control-allow-methods: GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD
+access-control-expose-headers: *
+

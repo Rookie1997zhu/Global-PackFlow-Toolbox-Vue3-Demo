@@ -131,3 +131,85 @@ class CalculationsApiTests(TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertEqual(r["X-Request-Id"], "req_test_abc")
         self.assertEqual(r.json().get("requestId"), "req_test_abc")
+
+    @patch("apps.calculations.tasks.call_pack_container", return_value=FAKE_ENGINE)
+    def test_idempotency_key_reuse_with_different_payload_conflicts(self, _mock) -> None:
+        """Same Idempotency-Key + different params must 409 (not silently return old job)."""
+        self._register("idem-conflict@calc.test")
+        scheme_id = self._scheme()
+        headers = {**self._csrf(), "HTTP_IDEMPOTENCY_KEY": "idem-reuse-1"}
+        r1 = self.client.post(
+            reverse("calc-job-create"),
+            {
+                "engine": "container",
+                "schemeId": scheme_id,
+                "params": {"containerPreset": "40HQ", "allowRotate": True},
+            },
+            format="json",
+            **headers,
+        )
+        self.assertEqual(r1.status_code, 202, r1.content)
+
+        headers2 = {**self._csrf(), "HTTP_IDEMPOTENCY_KEY": "idem-reuse-1"}
+        r2 = self.client.post(
+            reverse("calc-job-create"),
+            {
+                "engine": "container",
+                "schemeId": scheme_id,
+                "params": {"containerPreset": "20GP", "allowRotate": False},
+            },
+            format="json",
+            **headers2,
+        )
+        self.assertEqual(r2.status_code, 409, r2.content)
+        code = r2.json().get("code") or ""
+        self.assertIn("IDEMPOTENCY", code.upper())
+        usage = self.client.get(reverse("usage-summary"))
+        self.assertEqual(usage.json()["data"]["settled"], 1)
+
+    @patch("apps.calculations.tasks.call_pack_container", return_value=FAKE_ENGINE)
+    @patch("apps.calculations.services.DEFAULT_MONTHLY_QUOTA", 1)
+    def test_quota_is_natural_month_scoped(self, _mock) -> None:
+        """Prior-month settled usage must not block this month (quota=1)."""
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        from apps.calculations.models import ReservationStatus, UsageReservation
+
+        self._register("quota@calc.test")
+        scheme_id = self._scheme()
+        headers = {**self._csrf(), "HTTP_IDEMPOTENCY_KEY": "quota-old"}
+        r1 = self.client.post(
+            reverse("calc-job-create"),
+            {
+                "engine": "container",
+                "schemeId": scheme_id,
+                "params": {"containerPreset": "40HQ"},
+            },
+            format="json",
+            **headers,
+        )
+        self.assertEqual(r1.status_code, 202, r1.content)
+        # Move reservation to previous month
+        res = UsageReservation.objects.filter(status=ReservationStatus.SETTLED).latest("created_at")
+        UsageReservation.objects.filter(pk=res.pk).update(
+            created_at=timezone.now() - timedelta(days=40)
+        )
+
+        headers2 = {**self._csrf(), "HTTP_IDEMPOTENCY_KEY": "quota-new"}
+        r2 = self.client.post(
+            reverse("calc-job-create"),
+            {
+                "engine": "container",
+                "schemeId": scheme_id,
+                "params": {"containerPreset": "40HQ"},
+            },
+            format="json",
+            **headers2,
+        )
+        self.assertEqual(
+            r2.status_code,
+            202,
+            msg="prior-month usage must not consume current-month quota",
+        )

@@ -1,0 +1,23 @@
+﻿Store customer after social login (2026-11-10)
+- GET /api/customer => customer object (has_account=true)
+- Cookie _medusa_jwt present (Medusa store JWT)
+- Also still has sb-*-auth-token
+- metadata.authProvider observed: kakao.store.medusa-auth-plugin_kakao (social store auth)
+- customer id prefix cus_
+
+Editor opened
+- URL adds designId=UUID
+- Tools: AI / 배경 / 업로드 / 텍스트 / 요소 / 레이어
+- 2D / 3D toggle; canvas count=5
+- AI: style Flat Illustration, aspect 1:1, prompt, 생성
+
+AI generate E2E (Passed)
+1) POST https://studio-api.packative.com/v1/llm/prompt
+   body: {"designTheme":"<style prefix + user prompt>"}
+   resp: rewritten prompt JSON {response:"..."}
+2) POST https://studio-api.packative.com/v1/editor/create
+   resp: {status:success, image_url:https://studio-cdn.packative.com/{tenantId}/generated-images/{customerId}/{designId}/{genUuid}/image.webp, db_image_id, generation_number}
+3) GET https://studio-api.packative.com/v1/editor/generated-images?designId=...
+   resp: {success:true, images:[...]}
+
+Hosts: studio-api.packative.com, studio-cdn.packative.com

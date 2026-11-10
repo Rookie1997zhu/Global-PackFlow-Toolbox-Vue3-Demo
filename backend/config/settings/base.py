@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     "apps.imports",
     "apps.documents",
     "apps.calculations",
+    "apps.shipments",
     "apps.health",
 ]
 

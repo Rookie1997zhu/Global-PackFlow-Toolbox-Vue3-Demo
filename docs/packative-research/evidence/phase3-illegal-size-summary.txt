@@ -1,0 +1,34 @@
+﻿# Illegal size matrix summary (productbox-crashlock) — 2026-11-10
+
+## API: GET papi.../public/online/model?...&format=eps
+Common: HTTP 400, errorCode calc-700 (bad params: calc-440)
+
+| message | meaning (observed) | additionalData.targetValue |
+|---|---|---|
+| length-to-small | L too small | 25 |
+| length-to-big | L too big | 400 |
+| width-to-small | W too small | 25 |
+| width-to-big | W too big | 350 |
+| height-to-small | H too small | 25 |
+| height-to-big | H too big | 400 |
+| length-2third-width | L roughly must be ≥ ~2/3 W | null |
+
+### Empiric inclusive bounds (crashlock, when other dims OK)
+- L: 53..400 with W=80 H=50 (L=52 fails 2third; L=401 fails to-big). Absolute min hint 25 but 2third often binds first.
+- W: 25..350 absolute; with L=100, W≥200 often fails 2third before width-to-big.
+- H: 25..400 inclusive.
+
+### Other products (sample)
+- mailerbox: length-to-small targetValue=50 (25 fails)
+- pillowbox: length-to-small targetValue=30
+- sleeve/tray: 24mm samples returned 200 EPS in this probe (permissive or different rules)
+- sleeve 3000x2000x1000: model 200 EPS (price path not fully validated)
+
+## UI EN PDP Custom (productbox-crashlock)
+- "Length must be at least 25mm."
+- "Height must be at least 25mm."
+- Generic: "Selected dimensions aren't supported. Try adjusting length, width, or height." (max L/H, ratio, oversized W)
+- Screenshots: phase3-illegal-size-ui-length-min.png, phase3-illegal-size-ui-unsupported.png
+
+## PackFlow implication
+Independent engine should encode per-boxType min/max + relation constraints (e.g. L ≥ k·W) with stable error codes, not copy message strings.

@@ -17,6 +17,7 @@ from common.tenancy import require_membership, require_role
 from .models import CalculationJob, JobStatus
 from .serializers import JobCreateSerializer
 from .services import (
+    IdempotencyKeyReuse,
     create_job,
     job_to_dict,
     request_cancel,
@@ -51,14 +52,29 @@ class JobListCreateView(APIView):
         require_role(membership, WRITE_ROLES)
 
         idem = request.headers.get("Idempotency-Key") or request.headers.get("idempotency-key")
-        job = create_job(
-            team=membership.team,
-            user=request.user,
-            scheme_id=data["schemeId"],
-            revision_no=data.get("schemeRevision"),
-            params=data.get("params"),
-            idempotency_key=str(idem or ""),
-        )
+        try:
+            job = create_job(
+                team=membership.team,
+                user=request.user,
+                scheme_id=data["schemeId"],
+                revision_no=data.get("schemeRevision"),
+                params=data.get("params"),
+                idempotency_key=str(idem or ""),
+            )
+        except IdempotencyKeyReuse as exc:
+            return Response(
+                {
+                    "ok": False,
+                    "code": "IDEMPOTENCY_KEY_REUSE",
+                    "message": "Idempotency-Key was reused with a different payload",
+                    "requestId": getattr(request, "request_id", None),
+                    "errors": {
+                        "existingJobId": exc.existing_job_id,
+                        "inputHash": exc.input_hash,
+                    },
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
         return ok(job_to_dict(job), status=status.HTTP_202_ACCEPTED)
 
 
