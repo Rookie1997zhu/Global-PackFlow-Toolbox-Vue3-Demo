@@ -83,11 +83,19 @@ function draw() {
 
 function resize() {
   if (!holder.value || !renderer) return
-  const width = holder.value.clientWidth
-  const height = holder.value.clientHeight
-  camera.aspect = width / Math.max(1, height)
+  // Cap drawing buffer — uncapped setSize(updateStyle=false) lets the canvas
+  // intrinsic width explode the layout via ResizeObserver feedback.
+  const rawW = holder.value.clientWidth || holder.value.parentElement?.clientWidth || 640
+  const rawH = holder.value.clientHeight || 360
+  const width = Math.max(1, Math.min(Math.floor(rawW), 2048))
+  const height = Math.max(1, Math.min(Math.floor(rawH), 2048))
+  if (!Number.isFinite(width) || !Number.isFinite(height)) return
+  camera.aspect = width / height
   camera.updateProjectionMatrix()
-  renderer.setSize(width, height, false)
+  renderer.setSize(width, height, true)
+  renderer.domElement.style.width = '100%'
+  renderer.domElement.style.height = '100%'
+  renderer.domElement.style.display = 'block'
 }
 
 function resetCamera() {
@@ -184,6 +192,9 @@ defineExpose({ resetCamera })
 <style scoped>
 .three-container {
   position: relative;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   min-height: 360px;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
@@ -192,7 +203,16 @@ defineExpose({ resetCamera })
 }
 .three-canvas {
   width: 100%;
+  max-width: 100%;
   height: 360px;
+  min-width: 0;
+  overflow: hidden;
+}
+.three-canvas :deep(canvas) {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100%;
 }
 .three-hint {
   position: absolute;

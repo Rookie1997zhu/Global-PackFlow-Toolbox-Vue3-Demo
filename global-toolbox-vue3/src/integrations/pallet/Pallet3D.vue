@@ -30,7 +30,7 @@ function draw(){
  }
  const grid=new THREE.GridHelper(Math.max(l,w)*1.7,16,0xc9d6e7,0xdfe6f0);grid.position.set(l/2,-5,w/2);scene.add(grid)
 }
-function resize(){if(!holder.value||!renderer)return;const width=holder.value.clientWidth,height=holder.value.clientHeight;camera.aspect=width/height;camera.updateProjectionMatrix();renderer.setSize(width,height,false)}
+function resize(){if(!holder.value||!renderer)return;const rawW=holder.value.clientWidth||holder.value.parentElement?.clientWidth||640;const rawH=holder.value.clientHeight||360;const width=Math.max(1,Math.min(Math.floor(rawW),2048));const height=Math.max(1,Math.min(Math.floor(rawH),2048));if(!Number.isFinite(width)||!Number.isFinite(height))return;camera.aspect=width/height;camera.updateProjectionMatrix();renderer.setSize(width,height,true);renderer.domElement.style.width='100%';renderer.domElement.style.height='100%';renderer.domElement.style.display='block'}
 function resetCamera(){const {l,w,maxHeight}=props.config;const scale=Math.max(l,w,maxHeight);camera.position.set(l/2+scale*1.15,scale*1.05,w/2+scale*1.25);controls.target.set(l/2,Math.max(200,Math.min(maxHeight,props.config.h+450))/2,w/2);controls.update()}
 function click(event:MouseEvent){if(!holder.value)return;const rect=holder.value.getBoundingClientRect();pointer.set((event.clientX-rect.left)/rect.width*2-1,-(event.clientY-rect.top)/rect.height*2+1);raycaster.setFromCamera(pointer,camera);const hit=raycaster.intersectObjects(pickables)[0];selectedBox.value=hit?(hit.object.userData.box as Placed):null}
 function animate(){frame=requestAnimationFrame(animate);controls.update();renderer.render(scene,camera)}

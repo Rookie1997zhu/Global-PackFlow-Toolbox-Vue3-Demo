@@ -11,7 +11,7 @@ import { applyMapping, detectColumnMapping, type MappedRow } from '../../shared/
 import { CONTAINER_PRESETS } from './containers'
 import Container2D from './Container2D.vue'
 import Container3D from './Container3D.vue'
-import { packContainer, type PackResult } from './packing'
+import type { PackResult } from './packing'
 import { createPackingRunner } from './runPackingAsync'
 import {
   cargoToSkus,
@@ -25,7 +25,6 @@ import {
 import { isLoggedIn } from '../../shared/auth/session'
 import { createCalculationJob, pollCalculationResult } from '../../api/calculations'
 import { ensureSchemeId } from '../../shared/reports/cloudReport'
-import type { PackResult as EnginePackResult } from './packing'
 
 const props = defineProps<{
   t: (key: string) => string
@@ -75,10 +74,27 @@ const containerConfig = computed(() => ({
 
 const syncFromCargo = () => {
   const prev = new Map(skus.value.map((s) => [s.name, s]))
-  skus.value = cargoToSkus(cargo.value).map((s) => {
+  const next = cargoToSkus(cargo.value).map((s) => {
     const old = prev.get(s.name)
     return old ? { ...s, allowRotate: old.allowRotate, stackable: old.stackable, color: old.color } : s
   })
+  // Avoid deep-watch churn when App restores the same cargo snapshot.
+  const same =
+    next.length === skus.value.length &&
+    next.every((s, i) => {
+      const o = skus.value[i]
+      return (
+        o &&
+        o.name === s.name &&
+        o.length === s.length &&
+        o.width === s.width &&
+        o.height === s.height &&
+        o.weight === s.weight &&
+        o.qty === s.qty
+      )
+    })
+  if (same) return
+  skus.value = next
 }
 
 const run = async () => {
@@ -89,9 +105,10 @@ const run = async () => {
     container: { ...containerConfig.value },
     skus: skus.value.map((s) => ({ ...s })),
   }
-  const instanceCount = input.skus.reduce((s, p) => s + Math.max(0, Math.floor(Number(p.qty) || 0)), 0)
   try {
-    const out = instanceCount > 300 ? await runner.run(input) : packContainer(input)
+    // Always offload to worker (falls back inside runner) so sample cargo (~240 pcs)
+    // cannot freeze the main thread on first paint.
+    const out = await runner.run(input)
     if ('error' in out) {
       if (out.error === 'errContainerCancelled') return
       result.value = null
@@ -155,7 +172,7 @@ const cloudVerify = async () => {
       cloudMsg.value = props.t('cloudCalcFailed').replace('{msg}', res.message || res.status)
       return
     }
-    result.value = res.pack as unknown as EnginePackResult
+    result.value = res.pack as unknown as PackResult
     serverVerified.value = !!res.serverVerified
     engineVersion.value = res.engineVersion || ''
     cloudMsg.value = props.t('cloudCalcDone')

@@ -17,9 +17,9 @@ export type CargoRow = Cargo & {
 
 export function createSampleCargo(): Cargo[] {
   return [
-    { sku: 'SKU-A / Gift box', length: 42, width: 32, height: 28, weight: 7.5, qty: 120, price: 12.5 },
-    { sku: 'SKU-B / Accessories', length: 36, width: 28, height: 22, weight: 5.2, qty: 80, price: 8.9 },
-    { sku: 'SKU-C / Parts', length: 52, width: 38, height: 34, weight: 11.4, qty: 40, price: 24 },
+    { sku: 'SKU-A / Gift box', length: 42, width: 32, height: 28, weight: 7.5, qty: 24, price: 12.5 },
+    { sku: 'SKU-B / Accessories', length: 36, width: 28, height: 22, weight: 5.2, qty: 18, price: 8.9 },
+    { sku: 'SKU-C / Parts', length: 52, width: 38, height: 34, weight: 11.4, qty: 12, price: 24 },
   ]
 }
 

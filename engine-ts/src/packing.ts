@@ -134,9 +134,11 @@ function orientations(u: Unit): [number, number, boolean][] {
 }
 
 function candidates(placed: Placement[], c: ContainerConfig): Point[] {
-  const xs = [0, ...placed.map((b) => b.x + b.l)]
-  const ys = [0, ...placed.map((b) => b.y + b.w)]
-  const zs = [0, ...placed.map((b) => b.z + b.h)]
+  // Prefer recent boxes so candidate generation stays near-linear for large N.
+  const recent = placed.length > 48 ? placed.slice(-48) : placed
+  const xs = [0, ...recent.map((b) => b.x + b.l)]
+  const ys = [0, ...recent.map((b) => b.y + b.w)]
+  const zs = [0, ...recent.map((b) => b.z + b.h)]
   const points: Point[] = []
   const seen = new Set<string>()
   const push = (p: Point) => {
@@ -148,17 +150,23 @@ function candidates(placed: Placement[], c: ContainerConfig): Point[] {
       }
     }
   }
-  for (const x of xs) for (const y of ys) push({ x, y, z: 0 })
+  // Floor grid from recent extremes only (full n×n grid was freezing ~200+ units).
+  const xStep = Math.max(1, Math.ceil(xs.length / 12))
+  const yStep = Math.max(1, Math.ceil(ys.length / 12))
+  for (let i = 0; i < xs.length; i += xStep) {
+    for (let j = 0; j < ys.length; j += yStep) push({ x: xs[i], y: ys[j], z: 0 })
+  }
   for (const z of zs) {
     if (z === 0) continue
-    for (const b of placed) {
+    for (const b of recent) {
       if (Math.abs(b.z + b.h - z) > EPS) continue
       push({ x: b.x, y: b.y, z })
-      for (const x of xs) push({ x, y: b.y, z })
-      for (const y of ys) push({ x: b.x, y, z })
+      for (let i = 0; i < xs.length; i += xStep) push({ x: xs[i], y: b.y, z })
+      for (let j = 0; j < ys.length; j += yStep) push({ x: b.x, y: ys[j], z })
     }
   }
-  return points.sort((a, b) => a.z - b.z || a.y - b.y || a.x - b.x).slice(0, 500)
+  const cap = placed.length > 80 ? 48 : placed.length > 40 ? 72 : 96
+  return points.sort((a, b) => a.z - b.z || a.y - b.y || a.x - b.x).slice(0, cap)
 }
 
 function score(b: Placement, c: ContainerConfig, placed: Placement[], variant: number) {
@@ -179,6 +187,8 @@ function pick(u: Unit, placed: Placement[], weight: number, c: ContainerConfig, 
   let best: Placement | null = null
   let bestScore = Infinity
   const pts = candidates(placed, c)
+  // First feasible low-z placement is enough once many boxes are already packed.
+  const greedy = placed.length >= 60
   for (const pt of pts) {
     for (const [l, w, rotated] of orientations(u)) {
       const b: Placement = {
@@ -196,6 +206,7 @@ function pick(u: Unit, placed: Placement[], weight: number, c: ContainerConfig, 
         rotated,
       }
       if (!inBounds(b, c) || placed.some((q) => collides(b, q)) || !supported(b, placed)) continue
+      if (greedy) return b
       const s = score(b, c, placed, variant)
       if (s < bestScore - EPS) {
         bestScore = s
@@ -265,6 +276,19 @@ export function validatePack(placements: Placement[], c: ContainerConfig): strin
   return [...new Set(errors)]
 }
 
+/** Bounds / overlap / payload only — used when full support re-check would freeze the UI. */
+export function validatePackLight(placements: Placement[], c: ContainerConfig): string[] {
+  const errors: string[] = []
+  const weight = placements.reduce((s, b) => s + b.weight, 0)
+  if (weight > c.maxPayload + EPS) errors.push('errContainerOverweight')
+  for (let j = 0; j < placements.length; j++) {
+    const b = placements[j]
+    if (!inBounds(b, c)) errors.push('errContainerOutOfBounds')
+    for (let k = 0; k < j; k++) if (collides(b, placements[k])) errors.push('errContainerOverlap')
+  }
+  return [...new Set(errors)]
+}
+
 export function colorForIndex(i: number): string {
   return COLORS[i % COLORS.length]
 }
@@ -326,7 +350,8 @@ export function packContainer(input: PackInput): PackResult {
 
   let best: { placed: Placement[]; missing: Unit[]; weight: number } | null = null
   let bestVariant = 0
-  const attempts = units.length > 120 ? 4 : MAX_ATTEMPTS
+  // Large N: fewer strategy passes — each pass is O(n · candidates · collisions).
+  const attempts = units.length > 80 ? 1 : units.length > 40 ? 2 : Math.min(MAX_ATTEMPTS, 3)
   for (let variant = 0; variant < attempts; variant++) {
     const trial = attempt(units, c, variant)
     const better =
@@ -337,6 +362,7 @@ export function packContainer(input: PackInput): PackResult {
       best = trial
       bestVariant = variant
     }
+    if (trial.missing.length === 0) break
   }
 
   for (const u of best?.missing || []) {
@@ -346,7 +372,11 @@ export function packContainer(input: PackInput): PackResult {
   const placements = best?.placed || []
   const packedWeight = placements.reduce((s, b) => s + b.weight, 0)
   const packedVolumeMm3 = placements.reduce((s, b) => s + b.l * b.w * b.h, 0)
-  const geomErrors = validatePack(placements, c)
+  // Full support re-check is O(n²); for large packs rely on placement-time checks.
+  const geomErrors =
+    placements.length > 80
+      ? validatePackLight(placements, c)
+      : validatePack(placements, c)
   warnings.push(...geomErrors)
   warnings.push('containerSafetyHint')
 
