@@ -19,6 +19,9 @@ import {
   type PackingLine,
   cartonCountOf,
 } from './usePacking'
+import { isLoggedIn } from '../../shared/auth/session'
+import { cloudGenerateReport, ensureSchemeId } from '../../shared/reports/cloudReport'
+import type { ReportFormat } from '../../api/reports'
 
 const props = defineProps<{ t: (key: string) => string }>()
 const emit = defineEmits<{ editCargo: [] }>()
@@ -26,6 +29,8 @@ const emit = defineEmits<{ editCargo: [] }>()
 const hostLocale = inject<Ref<Locale>>('hostLocale', ref('en'))
 const { cargo } = useCargo()
 const format = (v: number, d = 2) => formatNumber(v, hostLocale.value, d)
+const cloudBusy = ref(false)
+const cloudMsg = ref('')
 
 const shipper = ref('YOUR COMPANY')
 const consignee = ref('CUSTOMER NAME')
@@ -112,6 +117,38 @@ const removeLine = (index: number) => {
   linesLocked.value = true
   lines.value.splice(index, 1)
 }
+
+const cloudExport = async (format: ReportFormat) => {
+  cloudMsg.value = ''
+  if (!isLoggedIn.value) {
+    cloudMsg.value = props.t('cloudReportNeedLogin')
+    return
+  }
+  cloudBusy.value = true
+  try {
+    const schemeId = await ensureSchemeId({
+      name: `PL ${po.value || 'scheme'}`,
+      cargo: cargo.value,
+      locale: hostLocale.value,
+    })
+    await cloudGenerateReport({
+      kind: 'packing_list',
+      format,
+      locale: hostLocale.value,
+      schemeId,
+      shipper: shipper.value,
+      consignee: consignee.value,
+      po: po.value,
+      title: props.t('packingList'),
+    })
+    cloudMsg.value = props.t('cloudReportDone')
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    cloudMsg.value = props.t('cloudReportError').replace('{msg}', props.t(msg) !== msg ? props.t(msg) : msg)
+  } finally {
+    cloudBusy.value = false
+  }
+}
 </script>
 
 <template>
@@ -191,7 +228,26 @@ const removeLine = (index: number) => {
           <button class="btn-secondary" type="button" @click="exportPackingCsv(lines, { shipper, consignee, po }, labels)">{{ t('export') }}</button>
           <button class="btn-secondary" type="button" @click="exportPackingXlsx(lines, { shipper, consignee, po }, labels)">{{ t('exportXlsx') }}</button>
           <button class="btn-primary" type="button" @click="exportPackingPdf(lines, { shipper, consignee, po, title: t('packingList') })">{{ t('exportPdf') }}</button>
+          <button
+            v-if="isLoggedIn"
+            class="btn-secondary"
+            type="button"
+            :disabled="cloudBusy || !!issues.length"
+            @click="cloudExport('pdf')"
+          >
+            {{ cloudBusy ? t('cloudReportBusy') : t('cloudReportPdf') }}
+          </button>
+          <button
+            v-if="isLoggedIn"
+            class="btn-secondary"
+            type="button"
+            :disabled="cloudBusy || !!issues.length"
+            @click="cloudExport('xlsx')"
+          >
+            {{ t('cloudReportXlsx') }}
+          </button>
         </div>
+        <p v-if="cloudMsg" class="field-hint">{{ cloudMsg }}</p>
       </div>
       <div class="hint-box">ⓘ {{ t('disclaimer') }}</div>
     </div>

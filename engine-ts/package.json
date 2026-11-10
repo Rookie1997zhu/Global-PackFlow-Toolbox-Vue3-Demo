@@ -1,0 +1,13 @@
+{
+  "name": "packflow-engine-ts",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/server.ts",
+    "test": "tsx --test src/packing.test.ts"
+  },
+  "dependencies": {
+    "tsx": "^4.19.2"
+  }
+}

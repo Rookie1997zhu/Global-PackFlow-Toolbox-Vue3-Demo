@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: global-toolbox-vue3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: global-toolbox-vue3/package-lock.json
+      - run: npm ci
+      - run: npm test -- --run
+      - name: Build
+        env:
+          SITE_ORIGIN: http://localhost:8080
+          VITE_BASE: /
+        run: npm run build
+
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: packflow
+          POSTGRES_USER: packflow
+          POSTGRES_PASSWORD: packflow
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U packflow -d packflow"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - name: Django tests
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings.dev
+          DJANGO_SECRET_KEY: ci-secret-key-not-for-production
+          DJANGO_DEBUG: "true"
+          POSTGRES_DB: packflow
+          POSTGRES_USER: packflow
+          POSTGRES_PASSWORD: packflow
+          POSTGRES_HOST: 127.0.0.1
+          POSTGRES_PORT: "5432"
+          CELERY_TASK_ALWAYS_EAGER: "true"
+          REDIS_URL: redis://127.0.0.1:6379/0
+          ENGINE_TS_URL: http://127.0.0.1:3100
+        run: python manage.py test tests -v 1

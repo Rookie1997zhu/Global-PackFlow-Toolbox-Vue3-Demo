@@ -1,0 +1,9 @@
+.git
+.cursor
+**/node_modules
+**/dist
+**/__pycache__
+**/.venv
+**/*.pyc
+.env
+cursor-fullstack-suite-v1.0.0

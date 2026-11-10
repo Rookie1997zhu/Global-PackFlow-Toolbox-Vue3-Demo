@@ -7,15 +7,30 @@ import { formatNumber } from './shared/format/number'
 import { unitDefs } from './shared/units'
 import { buildScheme, type CargoScheme } from './shared/persistence/scheme'
 import {
+  authBusy,
+  authError,
+  authReady,
+  bootstrapAuth,
+  currentUser,
+  isLoggedIn,
+  login as sessionLogin,
+  logout as sessionLogout,
+  register as sessionRegister,
+} from './shared/auth/session'
+import { ApiError } from './api/http'
+import { uploadCargoFile } from './api/files'
+import { importCommit, importPreview } from './api/imports'
+import {
   deleteScheme,
   exportSchemeFile,
   getAutoRestoreEnabled,
   importSchemeFile,
   listSchemes,
-  loadLatestScheme,
+  loadLatestForMode,
   saveCargoAsScheme,
   setAutoRestoreEnabled,
-} from './shared/persistence/schemeStore'
+  syncLocalSchemesToCloud,
+} from './shared/persistence/schemeRepository'
 import {
   GUIDES,
   isGuideId,
@@ -113,6 +128,7 @@ const active = computed<ToolId | null>(() => {
 })
 const showData = computed(() => view.value === 'shared')
 const showPricing = computed(() => view.value === 'pricing')
+const showPrivacy = computed(() => view.value === 'privacy')
 const guideId = computed<GuideId | null>(() => {
   if (view.value !== 'guide') return null
   const id = String(route.params.guideId || '')
@@ -139,7 +155,17 @@ const exportCargo = () =>
 const schemeName = ref('KR demo scheme')
 const schemeList = ref<CargoScheme[]>([])
 const schemeMsg = ref('')
+const activeSchemeId = ref<string | null>(null)
+const activeRowVersion = ref<number | null>(null)
 const autoRestore = ref(getAutoRestoreEnabled())
+const showAuth = ref(false)
+const authMode = ref<'login' | 'register'>('login')
+const authEmail = ref('')
+const authPassword = ref('')
+const schemeModeLabel = computed(() =>
+  isLoggedIn.value ? t('schemeModeCloud') : t('schemeModeLocal'),
+)
+
 const refreshSchemes = async () => {
   try {
     schemeList.value = await listSchemes()
@@ -150,10 +176,24 @@ const refreshSchemes = async () => {
 const saveScheme = async () => {
   schemeMsg.value = ''
   try {
-    await saveCargoAsScheme({ name: schemeName.value, cargo: cargo.value, locale: locale.value })
+    const saved = await saveCargoAsScheme({
+      name: schemeName.value,
+      cargo: cargo.value,
+      locale: locale.value,
+      id: activeSchemeId.value || undefined,
+      rowVersion: activeRowVersion.value ?? undefined,
+    })
+    activeSchemeId.value = saved.id
+    activeRowVersion.value = saved.rowVersion ?? null
+    schemeName.value = saved.name
     schemeMsg.value = t('schemeSaved')
     await refreshSchemes()
   } catch (err) {
+    if (err instanceof ApiError && err.code === 'SCHEME_VERSION_CONFLICT') {
+      schemeMsg.value = t('schemeConflict')
+      await refreshSchemes()
+      return
+    }
     schemeMsg.value = err instanceof Error ? err.message : String(err)
   }
 }
@@ -161,10 +201,21 @@ const restoreScheme = async (id: string) => {
   const found = schemeList.value.find((s) => s.id === id)
   if (!found) return
   setCargo(found.cargo.map((c) => ({ ...c })))
+  schemeName.value = found.name
+  activeSchemeId.value = found.id
+  activeRowVersion.value = found.rowVersion ?? null
   schemeMsg.value = t('schemeRestored')
 }
 const exportSchemeJson = () => {
-  exportSchemeFile(buildScheme({ name: schemeName.value, cargo: cargo.value, locale: locale.value }))
+  exportSchemeFile(
+    buildScheme({
+      name: schemeName.value,
+      cargo: cargo.value,
+      locale: locale.value,
+      id: activeSchemeId.value || undefined,
+      rowVersion: activeRowVersion.value ?? undefined,
+    }),
+  )
 }
 const onImportScheme = async (e: Event) => {
   const input = e.target as HTMLInputElement
@@ -175,6 +226,8 @@ const onImportScheme = async (e: Event) => {
     const scheme = await importSchemeFile(file)
     setCargo(scheme.cargo.map((c) => ({ ...c })))
     schemeName.value = scheme.name
+    activeSchemeId.value = scheme.id
+    activeRowVersion.value = scheme.rowVersion ?? null
     schemeMsg.value = t('schemeRestored')
     await refreshSchemes()
   } catch (err) {
@@ -183,6 +236,83 @@ const onImportScheme = async (e: Event) => {
 }
 const removeScheme = async (id: string) => {
   await deleteScheme(id)
+  if (activeSchemeId.value === id) {
+    activeSchemeId.value = null
+    activeRowVersion.value = null
+  }
+  await refreshSchemes()
+}
+const syncLocalToCloud = async () => {
+  schemeMsg.value = ''
+  try {
+    const result = await syncLocalSchemesToCloud()
+    schemeMsg.value = t('schemeSynced').replace('{n}', String(result.uploaded))
+    await refreshSchemes()
+  } catch (err) {
+    schemeMsg.value = err instanceof Error ? err.message : String(err)
+  }
+}
+const importBusy = ref(false)
+const onCloudImportFile = async (e: Event) => {
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file || !isLoggedIn.value) return
+  schemeMsg.value = ''
+  importBusy.value = true
+  try {
+    const asset = await uploadCargoFile(file)
+    const preview = await importPreview(asset.id)
+    const issueCount = preview.issues?.length || 0
+    schemeMsg.value = t('cloudImportPreviewOk')
+      .replace('{rows}', String(preview.rowCount))
+      .replace('{issues}', String(issueCount))
+    const committed = await importCommit(preview.id, {
+      name: schemeName.value || file.name,
+    })
+    setCargo(committed.cargo.map((c) => ({ ...c })))
+    schemeName.value = committed.scheme.name
+    activeSchemeId.value = committed.scheme.id
+    activeRowVersion.value = committed.scheme.rowVersion ?? null
+    schemeMsg.value = t('cloudImportDone')
+      .replace('{name}', committed.scheme.name)
+      .replace('{n}', String(committed.cargo.length))
+    await refreshSchemes()
+  } catch (err) {
+    if (err instanceof ApiError) {
+      schemeMsg.value = t('cloudImportBlocked').replace('{code}', err.code)
+    } else {
+      schemeMsg.value = err instanceof Error ? err.message : String(err)
+    }
+  } finally {
+    importBusy.value = false
+  }
+}
+const submitAuth = async () => {
+  try {
+    if (authMode.value === 'register') {
+      await sessionRegister(authEmail.value.trim(), authPassword.value, locale.value)
+    } else {
+      await sessionLogin(authEmail.value.trim(), authPassword.value)
+    }
+    showAuth.value = false
+    authPassword.value = ''
+    await refreshSchemes()
+    const latest = await loadLatestForMode()
+    if (latest?.cargo?.length) {
+      setCargo(latest.cargo.map((c) => ({ ...c })))
+      schemeName.value = latest.name
+      activeSchemeId.value = latest.id
+      activeRowVersion.value = latest.rowVersion ?? null
+    }
+  } catch {
+    /* authError computed */
+  }
+}
+const doLogout = async () => {
+  await sessionLogout()
+  activeSchemeId.value = null
+  activeRowVersion.value = null
   await refreshSchemes()
 }
 watch(autoRestore, (v) => setAutoRestoreEnabled(v))
@@ -213,12 +343,15 @@ watch(
 )
 
 onMounted(async () => {
+  await bootstrapAuth()
   await refreshSchemes()
   try {
-    const latest = await loadLatestScheme()
+    const latest = await loadLatestForMode()
     if (latest?.cargo?.length) {
       setCargo(latest.cargo.map((c) => ({ ...c })))
       schemeName.value = latest.name
+      activeSchemeId.value = latest.id
+      activeRowVersion.value = latest.rowVersion ?? null
     }
   } catch {
     /* ignore */
@@ -280,6 +413,10 @@ const openPricing = () => {
   void router.push(`/${locale.value}/pricing/`)
   mobileNav.value = false
 }
+const openPrivacy = () => {
+  void router.push(`/${locale.value}/legal/privacy/`)
+  mobileNav.value = false
+}
 const openGuide = (id: GuideId) => {
   void router.push(`/${locale.value}/guides/${id}/`)
   mobileNav.value = false
@@ -303,6 +440,7 @@ const onLocaleSelect = (e: Event) => {
 const breadcrumbTitle = computed(() => {
   if (active.value) return titles[active.value][idx.value]
   if (showPricing.value) return t('pricing')
+  if (showPrivacy.value) return t('privacyTitle')
   if (showData.value) return t('shared')
   if (guideId.value) return GUIDES.find((g) => g.id === guideId.value)?.title[locale.value] || t('guides')
   return t('tools')
@@ -310,7 +448,7 @@ const breadcrumbTitle = computed(() => {
 </script>
 
 <template>
-  <div class="shell">
+<div class="shell">
     <aside class="sidebar" :class="{ open: mobileNav }">
       <div class="brand" @click="back">
         <div class="brand-mark">P<span>·</span></div>
@@ -344,8 +482,8 @@ const breadcrumbTitle = computed(() => {
         <p>{{ t('sidebarDesc') }}</p>
         <button class="side-plan" type="button" @click="openPricing">{{ t('pricing') }} ↗</button>
       </div>
-    </aside>
-    <div class="main-wrap">
+  </aside>
+  <div class="main-wrap">
       <header class="topbar">
         <button class="hamburger" type="button" @click="mobileNav = !mobileNav">☰</button>
         <div class="breadcrumbs">
@@ -358,10 +496,33 @@ const breadcrumbTitle = computed(() => {
             <option value="zh">中文</option>
             <option value="ko">한국어</option>
           </select>
-          <button class="login" type="button" @click="openPricing">{{ t('sign') }}</button>
+          <template v-if="authReady">
+            <span v-if="isLoggedIn" class="auth-email" :title="currentUser?.email">{{ currentUser?.email }}</span>
+            <button v-if="isLoggedIn" class="login" type="button" :disabled="authBusy" @click="doLogout">
+              {{ t('signOut') }}
+            </button>
+            <button v-else class="login" type="button" @click="showAuth = true">{{ t('sign') }}</button>
+          </template>
         </div>
       </header>
-      <main class="main">
+      <div v-if="showAuth" class="auth-modal" @click.self="showAuth = false">
+        <div class="auth-card">
+          <h3>{{ authMode === 'login' ? t('signInTitle') : t('signUpTitle') }}</h3>
+          <label class="field">{{ t('authEmail') }}<input v-model="authEmail" type="email" autocomplete="username" /></label>
+          <label class="field">{{ t('authPassword') }}<input v-model="authPassword" type="password" autocomplete="current-password" /></label>
+          <p v-if="authError" class="field-hint" style="color: #a33b25">{{ authError }}</p>
+          <div class="btn-row" style="margin-top: 10px; gap: 8px">
+            <button class="btn-primary" type="button" :disabled="authBusy" @click="submitAuth">
+              {{ authMode === 'login' ? t('signInTitle') : t('signUpTitle') }}
+            </button>
+            <button class="btn-secondary" type="button" @click="showAuth = false">{{ t('cancel') }}</button>
+          </div>
+          <button class="linkish" type="button" style="margin-top: 10px" @click="authMode = authMode === 'login' ? 'register' : 'login'">
+            {{ authMode === 'login' ? t('needAccount') : t('haveAccount') }}
+          </button>
+        </div>
+      </div>
+    <main class="main">
         <template v-if="view === 'home'">
           <section class="hero">
             <div class="hero-content">
@@ -460,9 +621,22 @@ const breadcrumbTitle = computed(() => {
             </div>
             <button type="button" @click="openPricing">{{ t('pricing') }} →</button>
           </div>
-        </template>
+      </template>
 
-        <template v-else-if="showPricing">
+      <template v-else-if="showPrivacy">
+          <div class="page-heading">
+            <button class="back" type="button" @click="back">← {{ t('all') }}</button>
+            <div class="eyebrow dark">{{ t('privacyEyebrow') }}</div>
+            <h1>{{ t('privacyTitle') }}</h1>
+            <p>{{ t('privacyLead') }}</p>
+          </div>
+          <div class="panel">
+            <p>{{ t('privacyBody') }}</p>
+            <p class="field-hint">{{ t('privacyDisclaimer') }}</p>
+          </div>
+      </template>
+
+      <template v-else-if="showPricing">
           <div class="page-heading">
             <button class="back" type="button" @click="back">← {{ t('all') }}</button>
             <div class="eyebrow dark">{{ t('pricingEyebrow') }}</div>
@@ -480,9 +654,9 @@ const breadcrumbTitle = computed(() => {
               <button disabled>{{ t('comingLater') }}</button>
             </div>
           </div>
-        </template>
+      </template>
 
-        <template v-else-if="showData">
+      <template v-else-if="showData">
           <div class="page-heading">
             <button class="back" type="button" @click="back">← {{ t('all') }}</button>
             <div class="eyebrow dark">{{ t('sharedEyebrow') }}</div>
@@ -530,9 +704,26 @@ const breadcrumbTitle = computed(() => {
               <span>{{ qty }} {{ t('pcs') }}</span><span>{{ format(cbm) }} m³</span><span>{{ format(gross) }} kg</span
               ><span>${{ format(goodsValue) }}</span>
             </div>
+            <div
+              v-if="isLoggedIn"
+              style="margin-top: 16px; padding-top: 14px; border-top: 1px solid #e5ebf1"
+            >
+              <h3 style="margin: 0 0 8px; font-size: 14px">{{ t('cloudImportTitle') }}</h3>
+              <p class="field-hint">{{ t('cloudImportHint') }}</p>
+              <label class="btn-secondary" style="display: inline-flex; align-items: center; cursor: pointer; margin-top: 8px">
+                {{ importBusy ? '…' : t('cloudImportPick') }}
+                <input
+                  type="file"
+                  accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                  hidden
+                  :disabled="importBusy"
+                  @change="onCloudImportFile"
+                />
+              </label>
+            </div>
             <div style="margin-top: 16px; padding-top: 14px; border-top: 1px solid #e5ebf1">
               <h3 style="margin: 0 0 8px; font-size: 14px">{{ t('schemeBackup') }}</h3>
-              <p class="field-hint">{{ t('schemeBackupHint') }}</p>
+              <p class="field-hint">{{ isLoggedIn ? t('schemeBackupHintCloud') : t('schemeBackupHint') }} · {{ schemeModeLabel }}</p>
               <label class="field">{{ t('schemeName') }}<input v-model="schemeName" /></label>
               <label class="field" style="display: flex; align-items: center; gap: 8px; margin-top: 8px">
                 <input v-model="autoRestore" type="checkbox" /> {{ t('schemeAutoRestore') }}
@@ -544,6 +735,14 @@ const breadcrumbTitle = computed(() => {
                   {{ t('schemeImportJson') }}
                   <input type="file" accept=".json,application/json" hidden @change="onImportScheme" />
                 </label>
+                <button
+                  v-if="isLoggedIn"
+                  class="btn-secondary"
+                  type="button"
+                  @click="syncLocalToCloud"
+                >
+                  {{ t('schemeSyncLocal') }}
+                </button>
               </div>
               <p v-if="schemeMsg" class="field-hint">{{ schemeMsg }}</p>
               <ul v-if="schemeList.length" style="margin: 10px 0 0; padding-left: 18px">
@@ -555,11 +754,11 @@ const breadcrumbTitle = computed(() => {
               </ul>
             </div>
           </div>
-        </template>
+      </template>
 
         <GuidePage v-else-if="guideId" :t="t" :locale="locale" :guide-id="guideId" />
 
-        <template v-else-if="active">
+      <template v-else-if="active">
           <div class="page-heading">
             <button class="back" type="button" @click="back">← {{ t('all') }}</button>
             <div class="eyebrow dark">{{ catLabel(activeCategory) }} / {{ activePaid ? t('proTool') : t('freeTool') }}</div>
@@ -577,7 +776,7 @@ const breadcrumbTitle = computed(() => {
           <CommercialInvoice v-else-if="active === 'invoice'" :t="t" @edit-cargo="openSharedData" />
           <ShippingLabel v-else-if="active === 'labels'" :t="t" @edit-cargo="openSharedData" />
           <DocumentChecker v-else-if="active === 'audit'" :t="t" @edit-cargo="openSharedData" />
-          <template v-else>
+        <template v-else>
             <div class="tool-layout">
               <div class="tool-settings">
                 <div class="panel">
@@ -664,8 +863,11 @@ const breadcrumbTitle = computed(() => {
       </main>
       <footer class="footer">
         <span>{{ t('footerCopy') }}</span
-        ><span>EN · 中文 · 한국어 &nbsp; | &nbsp; {{ t('footerTagline') }}</span>
+        ><span
+          >EN · 中文 · 한국어 &nbsp; | &nbsp; {{ t('footerTagline') }} &nbsp; | &nbsp;
+          <button class="linkish" type="button" @click="openPrivacy">{{ t('privacyTitle') }}</button></span
+        >
       </footer>
     </div>
-  </div>
+</div>
 </template>

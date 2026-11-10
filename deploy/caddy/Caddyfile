@@ -1,0 +1,21 @@
+# Local HTTP gateway (Compose maps host 8080 -> container 80).
+# Production should use a hostname site block with automatic HTTPS.
+
+{
+	auto_https off
+}
+
+:80 {
+	encode gzip
+
+	# API must never fall through to SPA index.html
+	handle /api/* {
+		reverse_proxy api:8000
+	}
+
+	handle {
+		root * /srv/frontend
+		try_files {path} /index.html
+		file_server
+	}
+}

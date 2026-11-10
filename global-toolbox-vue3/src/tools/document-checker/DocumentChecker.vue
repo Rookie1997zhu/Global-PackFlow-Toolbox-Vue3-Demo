@@ -18,12 +18,15 @@ import {
   type DiffRow,
   type MatchKeyMode,
 } from './useChecker'
+import { isLoggedIn } from '../../shared/auth/session'
+import { cloudGenerateReport, ensureSchemeId } from '../../shared/reports/cloudReport'
+import type { ReportFormat } from '../../api/reports'
 
 const props = defineProps<{ t: (key: string) => string }>()
 const emit = defineEmits<{ editCargo: [] }>()
 
 const hostLocale = inject<Ref<Locale>>('hostLocale', ref('en'))
-const { qty, gross, goodsValue } = useCargo()
+const { cargo, qty, gross, goodsValue } = useCargo()
 const format = (v: number, d = 2) => formatNumber(v, hostLocale.value, d)
 
 const matchMode = ref<MatchKeyMode>('sku+carton')
@@ -31,6 +34,8 @@ const expected = ref<CheckerRow[]>([])
 const actual = ref<CheckerRow[]>([])
 const loadError = ref('')
 const pdfBusy = ref(false)
+const cloudBusy = ref(false)
+const cloudMsg = ref('')
 
 const diffs = computed<DiffRow[]>(() => matchCheckerRows(expected.value, actual.value, matchMode.value))
 const summary = computed(() => summarizeDiffs(diffs.value))
@@ -98,6 +103,53 @@ const exportPdf = async () => {
     pdfBusy.value = false
   }
 }
+
+const toDiffPayload = (rows: CheckerRow[]) =>
+  rows.map((r) => ({
+    sku: r.sku,
+    carton: r.carton,
+    po: r.po,
+    qty: r.qty,
+    weight: r.weight,
+    netKg: r.netKg,
+    amount: r.amount,
+    unit: r.unit,
+  }))
+
+const cloudExport = async (format: ReportFormat) => {
+  cloudMsg.value = ''
+  if (!isLoggedIn.value) {
+    cloudMsg.value = props.t('cloudReportNeedLogin')
+    return
+  }
+  cloudBusy.value = true
+  try {
+    let schemeId: string | undefined
+    if (cargo.value.length) {
+      schemeId = await ensureSchemeId({
+        name: 'Diff context',
+        cargo: cargo.value,
+        locale: hostLocale.value,
+      })
+    }
+    await cloudGenerateReport({
+      kind: 'diff',
+      format,
+      locale: hostLocale.value,
+      schemeId,
+      matchMode: matchMode.value,
+      expected: toDiffPayload(expected.value),
+      actual: toDiffPayload(actual.value),
+      title: props.t('diffReportTitle'),
+    })
+    cloudMsg.value = props.t('cloudReportDone')
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    cloudMsg.value = props.t('cloudReportError').replace('{msg}', props.t(msg) !== msg ? props.t(msg) : msg)
+  } finally {
+    cloudBusy.value = false
+  }
+}
 </script>
 
 <template>
@@ -153,7 +205,26 @@ const exportPdf = async () => {
           <button class="btn-primary" type="button" :disabled="!diffs.length || pdfBusy" @click="exportPdf">
             {{ pdfBusy ? t('exporting') : t('exportPdf') }}
           </button>
+          <button
+            v-if="isLoggedIn"
+            class="btn-secondary"
+            type="button"
+            :disabled="!diffs.length || cloudBusy"
+            @click="cloudExport('pdf')"
+          >
+            {{ cloudBusy ? t('cloudReportBusy') : t('cloudReportPdf') }}
+          </button>
+          <button
+            v-if="isLoggedIn"
+            class="btn-secondary"
+            type="button"
+            :disabled="!diffs.length || cloudBusy"
+            @click="cloudExport('xlsx')"
+          >
+            {{ t('cloudReportXlsx') }}
+          </button>
         </div>
+        <p v-if="cloudMsg" class="field-hint">{{ cloudMsg }}</p>
         <p class="field-hint">{{ t('auditHint') }}</p>
       </div>
       <div class="hint-box">ⓘ {{ t('disclaimer') }}</div>

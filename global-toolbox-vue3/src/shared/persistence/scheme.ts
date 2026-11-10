@@ -10,6 +10,8 @@ export type CargoScheme = {
   locale?: string
   cargo: Cargo[]
   meta?: Record<string, unknown>
+  /** Present for cloud-backed schemes (optimistic lock). */
+  rowVersion?: number
 }
 
 export function createSchemeId(): string {
@@ -22,6 +24,7 @@ export function buildScheme(input: {
   locale?: string
   id?: string
   meta?: Record<string, unknown>
+  rowVersion?: number
 }): CargoScheme {
   return {
     version: SCHEME_VERSION,
@@ -31,6 +34,7 @@ export function buildScheme(input: {
     locale: input.locale,
     cargo: input.cargo.map((c) => ({ ...c })),
     meta: input.meta,
+    rowVersion: input.rowVersion,
   }
 }
 

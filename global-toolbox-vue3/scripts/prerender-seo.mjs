@@ -394,6 +394,30 @@ for (const locale of locales) {
     fs.writeFileSync(path.join(dir, 'index.html'), html)
     urls.push(absUrl(segs.join('/') + '/'))
   }
+
+  const privacySegs = [locale, 'legal', 'privacy']
+  const privacyTitles = {
+    en: 'Privacy policy (draft)',
+    zh: '隐私政策（草案）',
+    ko: '개인정보 처리방침(초안)',
+  }
+  const privacyBody = {
+    en: 'Draft placeholder for PackFlow Beta. Not legal advice. Korean PIPA review pending before production.',
+    zh: 'PackFlow Beta 隐私政策占位草案，非正式法律意见；上线前需完成韩国 PIPA 审阅。',
+    ko: 'PackFlow Beta용 개인정보 처리방침 초안 자리표시자입니다. 법률 자문이 아니며 정식 서비스 전 PIPA 검토가 필요합니다.',
+  }
+  const privacyHtml = buildPage({
+    locale,
+    title: privacyTitles[locale],
+    description: privacyTitles[locale],
+    body: privacyBody[locale],
+    pathSegments: privacySegs,
+    linksHtml: toolLinks(locale),
+  })
+  const privacyDir = path.join(dist, ...privacySegs)
+  ensureDir(privacyDir)
+  fs.writeFileSync(path.join(privacyDir, 'index.html'), privacyHtml)
+  urls.push(absUrl(privacySegs.join('/') + '/'))
 }
 
 // SPA fallback for GitHub Pages deep links without prerender match
@@ -405,5 +429,12 @@ ${urls.map((u) => `  <url><loc>${u}</loc></url>`).join('\n')}
 </urlset>
 `
 fs.writeFileSync(path.join(dist, 'sitemap.xml'), sitemap)
+
+const robots = `User-agent: *
+Allow: /
+
+Sitemap: ${siteOrigin}${base === '/' ? '' : base.replace(/\/$/, '')}/sitemap.xml
+`
+fs.writeFileSync(path.join(dist, 'robots.txt'), robots)
 
 console.log(`Prerendered ${urls.length} URLs → dist/ (SITE_ORIGIN=${siteOrigin}, base=${base})`)

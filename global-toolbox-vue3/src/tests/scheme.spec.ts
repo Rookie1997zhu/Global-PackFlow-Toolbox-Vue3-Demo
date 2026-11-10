@@ -29,4 +29,13 @@ describe('cargo scheme serialize', () => {
     const cargo = mappedToCargo(applyMapping(table, detectColumnMapping(table[0])))
     expect(cargo[0]).toMatchObject({ sku: 'SKU-A', qty: 60, length: 42, weight: 7.5 })
   })
+
+  it('does not invent demo dimensions for incomplete sheet rows', () => {
+    const table = [
+      ['품명', '수량'],
+      ['SKU-Y', '3'],
+    ]
+    const cargo = mappedToCargo(applyMapping(table, detectColumnMapping(table[0])))
+    expect(cargo).toEqual([])
+  })
 })

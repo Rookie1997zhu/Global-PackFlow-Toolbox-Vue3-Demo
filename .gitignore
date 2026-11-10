@@ -5,3 +5,13 @@ dist/
 .vite/
 *.log
 .cursor/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+
+.env
+backups/
+cursor-fullstack-suite-v1.0.0/

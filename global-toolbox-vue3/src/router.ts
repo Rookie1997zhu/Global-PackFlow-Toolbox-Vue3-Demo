@@ -72,6 +72,16 @@ const routes: RouteRecordRaw[] = [
     redirect: (to) => `/${to.params.locale}/pricing/`,
   },
   {
+    path: '/:locale(en|zh|ko)/legal/privacy/',
+    name: 'privacy',
+    component: Empty,
+    meta: { view: 'privacy' },
+  },
+  {
+    path: '/:locale(en|zh|ko)/legal/privacy',
+    redirect: (to) => `/${to.params.locale}/legal/privacy/`,
+  },
+  {
     path: '/:locale(en|zh|ko)',
     redirect: (to) => `/${to.params.locale}/`,
   },

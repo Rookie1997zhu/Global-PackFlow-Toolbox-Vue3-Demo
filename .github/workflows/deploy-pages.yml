@@ -28,7 +28,15 @@ jobs:
           cache: npm
           cache-dependency-path: global-toolbox-vue3/package-lock.json
       - run: npm ci
-      - run: npx vite build
+      - run: npm test -- --run
+      - name: Build with prerender
+        env:
+          SITE_ORIGIN: ${{ vars.SITE_ORIGIN }}
+          VITE_BASE: ${{ vars.VITE_BASE }}
+        run: |
+          export SITE_ORIGIN="${SITE_ORIGIN:-https://example.com}"
+          export VITE_BASE="${VITE_BASE:-/}"
+          npm run build
       - uses: actions/upload-pages-artifact@v3
         with:
           path: global-toolbox-vue3/dist

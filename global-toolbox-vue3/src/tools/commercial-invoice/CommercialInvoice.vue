@@ -18,6 +18,9 @@ import {
   type InvoiceLine,
   type InvoiceMeta,
 } from './useInvoice'
+import { isLoggedIn } from '../../shared/auth/session'
+import { cloudGenerateReport, ensureSchemeId } from '../../shared/reports/cloudReport'
+import type { ReportFormat } from '../../api/reports'
 
 const props = defineProps<{ t: (key: string) => string }>()
 const emit = defineEmits<{ editCargo: [] }>()
@@ -25,6 +28,8 @@ const emit = defineEmits<{ editCargo: [] }>()
 const hostLocale = inject<Ref<Locale>>('hostLocale', ref('en'))
 const { cargo } = useCargo()
 const format = (v: number, d = 2) => formatNumber(v, hostLocale.value, d)
+const cloudBusy = ref(false)
+const cloudMsg = ref('')
 
 const meta = reactive<InvoiceMeta>({
   seller: 'YOUR COMPANY',
@@ -95,6 +100,42 @@ const loadKrSample = async () => {
     meta.paymentTerms = 'T/T 30 days'
   } catch (err) {
     sampleError.value = err instanceof Error ? err.message : String(err)
+  }
+}
+
+const cloudExport = async (format: ReportFormat) => {
+  cloudMsg.value = ''
+  if (!isLoggedIn.value) {
+    cloudMsg.value = props.t('cloudReportNeedLogin')
+    return
+  }
+  cloudBusy.value = true
+  try {
+    const schemeId = await ensureSchemeId({
+      name: `CI ${meta.invoiceNo || 'scheme'}`,
+      cargo: cargo.value,
+      locale: hostLocale.value,
+    })
+    await cloudGenerateReport({
+      kind: 'commercial_invoice',
+      format,
+      locale: hostLocale.value,
+      schemeId,
+      seller: meta.seller,
+      buyer: meta.buyer,
+      invoiceNo: meta.invoiceNo,
+      po: meta.po,
+      currency: meta.currency,
+      incoterms: meta.incoterms,
+      paymentTerms: meta.paymentTerms,
+      title: props.t('commercialInvoice'),
+    })
+    cloudMsg.value = props.t('cloudReportDone')
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    cloudMsg.value = props.t('cloudReportError').replace('{msg}', props.t(msg) !== msg ? props.t(msg) : msg)
+  } finally {
+    cloudBusy.value = false
   }
 }
 </script>
@@ -178,7 +219,26 @@ const loadKrSample = async () => {
           <button class="btn-secondary" type="button" @click="exportInvoiceCsv(meta, lines, labels)">{{ t('export') }}</button>
           <button class="btn-secondary" type="button" @click="exportInvoiceXlsx(meta, lines, labels)">{{ t('exportXlsx') }}</button>
           <button class="btn-primary" type="button" @click="exportInvoicePdf(meta, lines, t('commercialInvoice'), t('invoiceNoCustoms'))">{{ t('exportPdf') }}</button>
+          <button
+            v-if="isLoggedIn"
+            class="btn-secondary"
+            type="button"
+            :disabled="cloudBusy || !!issues.length"
+            @click="cloudExport('pdf')"
+          >
+            {{ cloudBusy ? t('cloudReportBusy') : t('cloudReportPdf') }}
+          </button>
+          <button
+            v-if="isLoggedIn"
+            class="btn-secondary"
+            type="button"
+            :disabled="cloudBusy || !!issues.length"
+            @click="cloudExport('xlsx')"
+          >
+            {{ t('cloudReportXlsx') }}
+          </button>
         </div>
+        <p v-if="cloudMsg" class="field-hint">{{ cloudMsg }}</p>
         <p class="field-hint">{{ t('invoiceHint') }} · {{ t('invoiceNoCustoms') }}</p>
       </div>
       <div class="hint-box">ⓘ {{ t('disclaimer') }}</div>

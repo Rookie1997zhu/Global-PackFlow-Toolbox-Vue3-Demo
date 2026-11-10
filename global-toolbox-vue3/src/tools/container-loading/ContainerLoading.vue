@@ -22,6 +22,10 @@ import {
   resolveContainer,
   type LocalSku,
 } from './useContainer'
+import { isLoggedIn } from '../../shared/auth/session'
+import { createCalculationJob, pollCalculationResult } from '../../api/calculations'
+import { ensureSchemeId } from '../../shared/reports/cloudReport'
+import type { PackResult as EnginePackResult } from './packing'
 
 const props = defineProps<{
   t: (key: string) => string
@@ -46,6 +50,10 @@ const pdfBusy = ref(false)
 const sampleError = ref('')
 const viewMode = ref<'2d' | '3d'>('2d')
 const view2d = ref<InstanceType<typeof Container2D> | null>(null)
+const cloudBusy = ref(false)
+const cloudMsg = ref('')
+const serverVerified = ref(false)
+const engineVersion = ref('')
 
 const runner = createPackingRunner()
 
@@ -91,11 +99,71 @@ const run = async () => {
       return
     }
     result.value = out
+    serverVerified.value = false
+    engineVersion.value = ''
   } catch (err) {
     result.value = null
     errorKey.value = err instanceof Error ? err.message : 'errContainerFailed'
   } finally {
     busy.value = false
+  }
+}
+
+const cloudVerify = async () => {
+  cloudMsg.value = ''
+  if (!isLoggedIn.value) {
+    cloudMsg.value = props.t('cloudReportNeedLogin')
+    return
+  }
+  cloudBusy.value = true
+  serverVerified.value = false
+  try {
+    const cargoRows = skus.value.map((s) => ({
+      sku: s.name,
+      length: s.length / 10,
+      width: s.width / 10,
+      height: s.height / 10,
+      weight: s.weight,
+      qty: s.qty,
+      price: 0,
+    }))
+    setCargo(cargoRows)
+    const schemeId = await ensureSchemeId({
+      name: `Container ${presetId.value}`,
+      cargo: cargoRows,
+      locale: hostLocale.value,
+    })
+    const job = await createCalculationJob({
+      schemeId,
+      idempotencyKey: `container-${schemeId}-${presetId.value}-${Date.now()}`,
+      params: {
+        containerPreset: presetId.value,
+        allowRotate: skus.value.every((s) => s.allowRotate),
+        custom:
+          presetId.value === 'custom'
+            ? {
+                lengthMm: customL.value,
+                widthMm: customW.value,
+                heightMm: customH.value,
+                maxPayload: customMax.value,
+              }
+            : undefined,
+      },
+    })
+    const res = await pollCalculationResult(job.jobId)
+    if (res.status !== 'succeeded' || !res.pack) {
+      cloudMsg.value = props.t('cloudCalcFailed').replace('{msg}', res.message || res.status)
+      return
+    }
+    result.value = res.pack as unknown as EnginePackResult
+    serverVerified.value = !!res.serverVerified
+    engineVersion.value = res.engineVersion || ''
+    cloudMsg.value = props.t('cloudCalcDone')
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    cloudMsg.value = props.t('cloudCalcFailed').replace('{msg}', msg)
+  } finally {
+    cloudBusy.value = false
   }
 }
 
@@ -275,8 +343,19 @@ const exportLoadPdf = async () => {
             {{ busy ? t('containerRunning') : t('run') }}
           </button>
           <button class="btn-secondary" type="button" :disabled="!busy" @click="cancel">{{ t('containerCancel') }}</button>
+          <button
+            v-if="isLoggedIn"
+            class="btn-secondary"
+            type="button"
+            :disabled="cloudBusy || busy"
+            @click="cloudVerify"
+          >
+            {{ cloudBusy ? t('cloudCalcBusy') : t('cloudCalcVerify') }}
+          </button>
         </div>
         <p v-if="errorKey" class="field-hint" style="color:#b42318">{{ t(errorKey) }}</p>
+        <p v-if="cloudMsg" class="field-hint">{{ cloudMsg }}</p>
+        <p v-if="!isLoggedIn" class="field-hint">{{ t('cloudCalcPreviewOnly') }}</p>
       </div>
       <div class="mini-panel">
         <span>▤</span>
@@ -293,6 +372,8 @@ const exportLoadPdf = async () => {
         <div class="panel-heading">
           <h3>{{ t('results') }}</h3>
           <span class="small-badge light">{{ busy ? t('containerRunning') : t('autoUpdated') }}</span>
+          <span v-if="serverVerified" class="small-badge">{{ t('serverVerified') }} · {{ engineVersion }}</span>
+          <span v-else-if="result" class="small-badge light">{{ t('notServerVerified') }}</span>
         </div>
 
         <template v-if="result">

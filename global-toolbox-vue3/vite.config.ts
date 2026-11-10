@@ -7,6 +7,14 @@ const base = process.env.VITE_BASE || '/'
 export default defineConfig({
   plugins: [vue()],
   base,
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://127.0.0.1:8080',
+        changeOrigin: true,
+      },
+    },
+  },
   test: {
     environment: 'node',
     include: ['src/tests/**/*.spec.ts'],

@@ -1,0 +1,155 @@
+# PackFlow local / demo stack.
+# Gateway is Caddy only (no Nginx). Redis/worker/engine_ts are internal only.
+#
+# Usage:
+#   cp .env.example .env
+#   docker compose -f deploy/compose.yml --env-file .env up -d --build
+
+name: packflow
+
+services:
+  frontend:
+    build:
+      context: ../global-toolbox-vue3
+      dockerfile: Dockerfile
+      args:
+        SITE_ORIGIN: ${SITE_ORIGIN:-http://localhost:8080}
+        VITE_BASE: ${VITE_BASE:-/}
+    restart: "no"
+    volumes:
+      - frontend_dist:/srv/frontend
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - frontend_dist:/srv/frontend:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      frontend:
+        condition: service_completed_successfully
+      api:
+        condition: service_healthy
+
+  api:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.prod
+      DJANGO_SECURE_SSL_REDIRECT: "false"
+      SESSION_COOKIE_SECURE: "false"
+      CSRF_COOKIE_SECURE: "false"
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      MEDIA_ROOT: /data/media
+      REDIS_URL: redis://redis:6379/0
+      ENGINE_TS_URL: http://engine_ts:3100
+    volumes:
+      - media_data:/data/media
+    expose:
+      - "8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      engine_ts:
+        condition: service_started
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health/ready/', timeout=3)",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+
+  worker:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.prod
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      MEDIA_ROOT: /data/media
+      REDIS_URL: redis://redis:6379/0
+      ENGINE_TS_URL: http://engine_ts:3100
+    volumes:
+      - media_data:/data/media
+    entrypoint: ["/app/worker-entrypoint.sh"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      engine_ts:
+        condition: service_started
+      api:
+        condition: service_healthy
+
+  engine_ts:
+    build:
+      context: ../engine-ts
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      PORT: "3100"
+    expose:
+      - "3100"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3100/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    expose:
+      - "6379"
+    # Intentionally no host ports — broker is internal only.
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pgdata:
+  frontend_dist:
+  media_data:
+  caddy_data:
+  caddy_config:

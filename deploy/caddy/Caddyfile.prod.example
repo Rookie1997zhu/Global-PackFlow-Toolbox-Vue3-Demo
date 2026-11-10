@@ -1,0 +1,16 @@
+# Production TLS example — NOT used by default local Compose (8080:80).
+# Replace example.com with your hostname; enable only when DNS points here.
+#
+# example.com {
+#   encode gzip
+#   root * /srv/frontend
+#   handle /api/* {
+#     reverse_proxy api:8000
+#   }
+#   handle {
+#     try_files {path} /index.html
+#     file_server
+#   }
+# }
+#
+# Local demo continues to use Caddyfile with `:80` and auto_https off.
